@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,6 +12,24 @@ interface ImageLink {
 export function ImageLinkPreview() {
   const [inputText, setInputText] = useState('')
   const [imageLinks, setImageLinks] = useState<ImageLink[]>([])
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
+  const [brokenImageUrls, setBrokenImageUrls] = useState<Record<string, boolean>>({})
+  const [isPreviewLoadError, setIsPreviewLoadError] = useState(false)
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedImageUrl(null)
+        setIsPreviewLoadError(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
 
   const parseLinks = () => {
     const lines = inputText
@@ -19,6 +37,9 @@ export function ImageLinkPreview() {
       .map((line) => line.trim())
       .filter((line) => line)
     setImageLinks(lines.map((url) => ({ url })))
+    setBrokenImageUrls({})
+    setSelectedImageUrl(null)
+    setIsPreviewLoadError(false)
   }
 
   const loadDemo = () => {
@@ -31,6 +52,19 @@ export function ImageLinkPreview() {
     ]
     setInputText(demoImages.join('\n'))
     setImageLinks(demoImages.map((url) => ({ url })))
+    setBrokenImageUrls({})
+    setSelectedImageUrl(null)
+    setIsPreviewLoadError(false)
+  }
+
+  const openImagePreview = (url: string) => {
+    setSelectedImageUrl(url)
+    setIsPreviewLoadError(false)
+  }
+
+  const closeImagePreview = () => {
+    setSelectedImageUrl(null)
+    setIsPreviewLoadError(false)
   }
 
   return (
@@ -88,15 +122,28 @@ export function ImageLinkPreview() {
                 {imageLinks.map((link, index) => (
                   <TableRow key={`${link.url}-${index}`}>
                     <TableCell>
-                      <img
-                        src={link.url}
-                        alt={`图片预览 ${index + 1}`}
-                        className="max-w-[160px] max-h-[160px] object-contain rounded-md border bg-background"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                        }}
-                      />
+                      {brokenImageUrls[link.url] ? (
+                        <div className="flex h-24 w-40 items-center justify-center rounded-md border border-dashed bg-muted px-2 text-center text-xs text-muted-foreground">
+                          图片加载失败
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          onClick={() => openImagePreview(link.url)}
+                          aria-label={`查看第 ${index + 1} 张图片大图`}
+                          title="点击查看大图"
+                        >
+                          <img
+                            src={link.url}
+                            alt={`图片预览 ${index + 1}`}
+                            className="max-w-[160px] max-h-[160px] object-contain rounded-md border bg-background cursor-zoom-in"
+                            onError={() => {
+                              setBrokenImageUrls((prev) => ({ ...prev, [link.url]: true }))
+                            }}
+                          />
+                        </button>
+                      )}
                     </TableCell>
                     <TableCell>
                       <a
@@ -115,6 +162,41 @@ export function ImageLinkPreview() {
             </Table>
           </CardContent>
         </Card>
+      )}
+
+      {selectedImageUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="图片放大预览"
+          onClick={closeImagePreview}
+        >
+          <div
+            className="relative h-4/5 w-4/5 max-h-none max-w-none rounded-lg border bg-background p-2 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="absolute right-2 top-2 z-10 rounded-md bg-black/60 px-3 py-1 text-sm text-white hover:bg-black/75"
+              onClick={closeImagePreview}
+            >
+              关闭
+            </button>
+            {isPreviewLoadError ? (
+              <div className="flex h-full items-center justify-center rounded-md border border-dashed bg-muted px-4 text-center text-sm text-muted-foreground">
+                大图加载失败，请使用右侧链接在新窗口打开查看。
+              </div>
+            ) : (
+              <img
+                src={selectedImageUrl}
+                alt="放大预览"
+                className="mx-auto h-full w-full rounded-md object-contain"
+                onError={() => setIsPreviewLoadError(true)}
+              />
+            )}
+          </div>
+        </div>
       )}
     </div>
   )
