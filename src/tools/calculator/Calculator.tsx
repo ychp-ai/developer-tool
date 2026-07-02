@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Calculator as CalculatorIcon, History, Trash2 } from 'lucide-react'
+import { Calculator as CalculatorIcon, Clipboard, History, Trash2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -10,7 +10,6 @@ interface HistoryItem {
 
 export function Calculator() {
   const [expression, setExpression] = useState('')
-  const [display, setDisplay] = useState('0')
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [error, setError] = useState<string | null>(null)
   const [lastResult, setLastResult] = useState<string | null>(null)
@@ -21,11 +20,63 @@ export function Calculator() {
     try {
       const result = Function('"use strict"; return (' + cleanExpr + ')')()
       return result
-    } catch (e) {
+    } catch {
       setError('表达式错误')
       return NaN
     }
   }, [])
+
+  const normalizeExpression = useCallback((value: string): string => {
+    return value
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(/[xX*]/g, '×')
+      .replace(/[/／]/g, '÷')
+      .replace(/[−–]/g, '-')
+      .replace(/，/g, '.')
+      .replace(/（/g, '(')
+      .replace(/）/g, ')')
+      .replace(/％/g, '%')
+      .replace(/=+$/g, '')
+  }, [])
+
+  const applyExpressionFromClipboard = useCallback(
+    (clipboardText: string) => {
+      const normalizedExpression = normalizeExpression(clipboardText)
+      if (!normalizedExpression) {
+        setError('剪贴板内容为空')
+        return
+      }
+
+      if (!/^[\d+\-×÷^%.()]+$/.test(normalizedExpression)) {
+        setError('剪贴板内容包含不支持的字符')
+        return
+      }
+
+      setError(null)
+      setExpression(previousExpression => {
+        const baseExpression = previousExpression || lastResult || ''
+        const nextExpression = `${baseExpression}${normalizedExpression}`
+        setLastResult(null)
+        return nextExpression
+      })
+    },
+    [normalizeExpression, lastResult]
+  )
+
+  const pasteFromClipboard = useCallback(async () => {
+    if (!navigator.clipboard?.readText) {
+      setError('当前浏览器不支持读取剪贴板，请使用 Cmd/Ctrl+V')
+      return
+    }
+
+    try {
+      const clipboardText = await navigator.clipboard.readText()
+      applyExpressionFromClipboard(clipboardText)
+    } catch {
+      setError('读取剪贴板失败，请检查浏览器权限')
+    }
+  }, [applyExpressionFromClipboard])
 
   const calculate = useCallback(() => {
     setError(null)
@@ -37,17 +88,16 @@ export function Calculator() {
     const result = evaluateExpression(expression)
 
     if (isNaN(result)) {
-      setDisplay('Error')
       return
     }
 
     if (!isFinite(result)) {
-      setDisplay('Infinity')
+      setLastResult('Infinity')
+      setExpression('')
       return
     }
 
     const resultStr = String(result)
-    setDisplay(resultStr)
     setLastResult(resultStr)
 
     setHistory(prev => [{ expression, result: resultStr }, ...prev].slice(0, 20))
@@ -57,118 +107,118 @@ export function Calculator() {
   const inputDigit = useCallback(
     (digit: string) => {
       setError(null)
+      setExpression(previousExpression => {
+        if (lastResult !== null && previousExpression === '') {
+          setLastResult(null)
+          return digit
+        }
 
-      if (lastResult !== null && expression === '') {
-        setLastResult(null)
-        setExpression(digit)
-        setDisplay(digit)
-      } else {
-        const newExpression = expression === '' ? digit : expression + digit
-        setExpression(newExpression)
-        setDisplay(newExpression)
-      }
+        return previousExpression === '' ? digit : previousExpression + digit
+      })
     },
-    [expression, lastResult]
+    [lastResult]
   )
 
   const inputOperator = useCallback(
     (op: string) => {
       setError(null)
+      setExpression(previousExpression => {
+        if (lastResult !== null && previousExpression === '') {
+          setLastResult(null)
+          return lastResult + op
+        }
 
-      if (lastResult !== null && expression === '') {
-        setLastResult(null)
-        setExpression(display + op)
-        setDisplay(display + op)
-        return
-      }
+        const lastChar = previousExpression.slice(-1)
+        if (['+', '-', '×', '÷', '^'].includes(lastChar)) {
+          return previousExpression.slice(0, -1) + op
+        }
 
-      const lastChar = expression.slice(-1)
-      if (['+', '-', '×', '÷', '^'].includes(lastChar)) {
-        const newExpression = expression.slice(0, -1) + op
-        setExpression(newExpression)
-        setDisplay(newExpression)
-      } else {
-        const newExpression = expression + op
-        setExpression(newExpression)
-        setDisplay(newExpression)
-      }
+        return previousExpression + op
+      })
     },
-    [expression, display, lastResult]
+    [lastResult]
   )
 
   const inputDecimal = useCallback(() => {
     setError(null)
+    setExpression(previousExpression => {
+      const parts = previousExpression.split(/[+×÷^-]/)
+      const lastPart = parts[parts.length - 1]
 
-    const parts = expression.split(/[\+\-\×\÷\^]/)
-    const lastPart = parts[parts.length - 1]
+      if (lastPart && lastPart.indexOf('.') === -1) {
+        return previousExpression === '' ? '0.' : previousExpression + '.'
+      }
 
-    if (lastPart && lastPart.indexOf('.') === -1) {
-      const newExpression = expression === '' ? '0.' : expression + '.'
-      setExpression(newExpression)
-      setDisplay(newExpression)
-    } else if (expression === '') {
-      setExpression('0.')
-      setDisplay('0.')
-    }
-  }, [expression])
+      if (previousExpression === '') {
+        return '0.'
+      }
+
+      return previousExpression
+    })
+  }, [])
 
   const clear = useCallback(() => {
     setExpression('')
-    setDisplay('0')
     setError(null)
     setLastResult(null)
   }, [])
 
   const deleteLast = useCallback(() => {
     setError(null)
+    setExpression(previousExpression => {
+      if (previousExpression.length > 0) {
+        return previousExpression.slice(0, -1)
+      }
 
-    if (expression.length > 0) {
-      const newExpression = expression.slice(0, -1)
-      setExpression(newExpression)
-      setDisplay(newExpression === '' ? '0' : newExpression)
-    } else {
-      setDisplay('0')
-    }
-  }, [expression])
+      setLastResult(null)
+      return previousExpression
+    })
+  }, [])
 
   const toggleSign = useCallback(() => {
     setError(null)
-    const parts = expression.split(/[\+\-\×\÷\^]/)
-    const lastPart = parts[parts.length - 1]
+    setExpression(previousExpression => {
+      const parts = previousExpression.split(/[+×÷^-]/)
+      const lastPart = parts[parts.length - 1]
 
-    if (lastPart && lastPart !== '') {
-      const operators = expression.split(new RegExp(lastPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$'))
-      const operator = operators[operators.length - 1]
-
-      let newExpression = ''
-      if (operator.endsWith('-')) {
-        newExpression = expression.slice(0, -lastPart.length - 1) + '+' + lastPart
-      } else if (operator.endsWith('+')) {
-        newExpression = expression.slice(0, -lastPart.length - 1) + '-' + lastPart
-      } else {
-        newExpression = expression.slice(0, -lastPart.length) + '-' + lastPart
+      if (!lastPart || lastPart === '') {
+        return previousExpression
       }
 
-      setExpression(newExpression)
-      setDisplay(newExpression)
-    }
-  }, [expression])
+      const operators = previousExpression.split(
+        new RegExp(lastPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$')
+      )
+      const operator = operators[operators.length - 1]
+
+      if (operator.endsWith('-')) {
+        return previousExpression.slice(0, -lastPart.length - 1) + '+' + lastPart
+      }
+
+      if (operator.endsWith('+')) {
+        return previousExpression.slice(0, -lastPart.length - 1) + '-' + lastPart
+      }
+
+      return previousExpression.slice(0, -lastPart.length) + '-' + lastPart
+    })
+  }, [])
 
   const inputPercent = useCallback(() => {
     setError(null)
-    const parts = expression.split(/[\+\-\×\÷\^]/)
-    const lastPart = parts[parts.length - 1]
+    setExpression(previousExpression => {
+      const parts = previousExpression.split(/[+×÷^-]/)
+      const lastPart = parts[parts.length - 1]
 
-    if (lastPart && lastPart !== '') {
-      const value = parseFloat(lastPart)
-      if (!isNaN(value)) {
-        const percentValue = value / 100
-        const newExpression = expression.slice(0, -lastPart.length) + percentValue.toString()
-        setExpression(newExpression)
-        setDisplay(newExpression)
+      if (lastPart && lastPart !== '') {
+        const value = parseFloat(lastPart)
+        if (!isNaN(value)) {
+          const percentValue = value / 100
+          return previousExpression.slice(0, -lastPart.length) + percentValue.toString()
+        }
       }
-    }
-  }, [expression])
+
+      return previousExpression
+    })
+  }, [])
 
   const square = useCallback(() => {
     setError(null)
@@ -177,13 +227,12 @@ export function Calculator() {
       const value = parseFloat(lastResult)
       const result = value * value
       const resultStr = String(result)
-      setDisplay(resultStr)
       setHistory(prev => [{ expression: `${lastResult}²`, result: resultStr }, ...prev].slice(0, 20))
       setLastResult(resultStr)
       return
     }
 
-    const parts = expression.split(/[\+\-\×\÷\^]/)
+    const parts = expression.split(/[+×÷^-]/)
     const lastPart = parts[parts.length - 1]
 
     if (lastPart && lastPart !== '') {
@@ -192,7 +241,6 @@ export function Calculator() {
         const result = value * value
         const newExpression = expression.slice(0, -lastPart.length) + result.toString()
         setExpression(newExpression)
-        setDisplay(newExpression)
       }
     }
   }, [expression, lastResult])
@@ -208,13 +256,12 @@ export function Calculator() {
       }
       const result = Math.sqrt(value)
       const resultStr = String(result)
-      setDisplay(resultStr)
       setHistory(prev => [{ expression: `√${lastResult}`, result: resultStr }, ...prev].slice(0, 20))
       setLastResult(resultStr)
       return
     }
 
-    const parts = expression.split(/[\+\-\×\÷\^]/)
+    const parts = expression.split(/[+×÷^-]/)
     const lastPart = parts[parts.length - 1]
 
     if (lastPart && lastPart !== '') {
@@ -226,7 +273,6 @@ export function Calculator() {
       const result = Math.sqrt(value)
       const newExpression = expression.slice(0, -lastPart.length) + result.toString()
       setExpression(newExpression)
-      setDisplay(newExpression)
     }
   }, [expression, lastResult])
 
@@ -276,12 +322,20 @@ export function Calculator() {
       return 'Error'
     }
 
-    if (display === '' || display === '0') {
+    if (expression) {
+      return expression
+    }
+
+    if (lastResult) {
+      return lastResult
+    }
+
+    if (expression === '' || expression === '0') {
       return '0'
     }
 
-    return display
-  }, [display, error])
+    return expression
+  }, [expression, lastResult, error])
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
@@ -294,7 +348,13 @@ export function Calculator() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <Card className="p-6">
+          <Card
+            className="p-6"
+            onPaste={event => {
+              event.preventDefault()
+              applyExpressionFromClipboard(event.clipboardData.getData('text'))
+            }}
+          >
             <div className="mb-4">
               <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4 mb-2 min-h-[80px] flex flex-col justify-end items-end">
                 {error && (
@@ -302,10 +362,26 @@ export function Calculator() {
                     {error}
                   </div>
                 )}
-                <div className="text-4xl font-bold text-slate-900 dark:text-slate-100 break-all text-right">
-                  {displayValue}
-                </div>
+                <textarea
+                  aria-label="计算器输入"
+                  readOnly
+                  value={displayValue}
+                  className="w-full resize-none bg-transparent text-right text-4xl font-bold text-slate-900 dark:text-slate-100 break-all focus:outline-none"
+                  rows={2}
+                />
               </div>
+            </div>
+
+            <div className="mb-4 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void pasteFromClipboard()}
+                className="gap-2"
+              >
+                <Clipboard className="w-4 h-4" />
+                追加剪贴板
+              </Button>
             </div>
 
             <div className="grid grid-cols-5 gap-2">
@@ -510,6 +586,10 @@ export function Calculator() {
                 <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">%</kbd>
                 <span className="text-slate-600 dark:text-slate-400">百分比</span>
               </div>
+              <div className="flex items-center gap-2">
+                <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">Cmd/Ctrl + V</kbd>
+                <span className="text-slate-600 dark:text-slate-400">粘贴表达式</span>
+              </div>
             </div>
           </Card>
         </div>
@@ -546,7 +626,6 @@ export function Calculator() {
                     className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                     onClick={() => {
                       setExpression('')
-                      setDisplay(item.result)
                       setLastResult(item.result)
                     }}
                   >
@@ -571,6 +650,7 @@ export function Calculator() {
               <ul className="list-disc list-inside space-y-1">
                 <li>输入完整表达式后按 = 计算</li>
                 <li>支持运算符优先级</li>
+                <li>支持从剪贴板粘贴表达式</li>
                 <li>点击历史记录可使用结果</li>
                 <li>最多保留 20 条历史记录</li>
               </ul>
