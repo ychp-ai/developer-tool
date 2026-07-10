@@ -8,6 +8,56 @@ import { useUndoRedo } from '@/hooks/useUndoRedo'
 
 type JsonNode = string | number | boolean | null | { [key: string]: JsonNode } | JsonNode[]
 
+const ESCAPED_SEQUENCE_PATTERN = /\\(["\\/bfnrt]|u[0-9a-fA-F]{4})/
+const JSON_CONTAINER_PATTERN = /^[[{].*[\]}]$/s
+const MAX_NESTED_JSON_PARSE_DEPTH = 3
+
+function parseJsonWithEscapedContent(rawInput: string): JsonNode {
+  const normalizeJsonNode = (value: JsonNode, depth = 0): JsonNode => {
+    if (Array.isArray(value)) {
+      return value.map(item => normalizeJsonNode(item, depth))
+    }
+
+    if (value !== null && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.entries(value).map(([key, item]) => [key, normalizeJsonNode(item, depth)])
+      ) as JsonNode
+    }
+
+    if (typeof value !== 'string' || depth >= MAX_NESTED_JSON_PARSE_DEPTH) {
+      return value
+    }
+
+    const trimmedValue = value.trim()
+    if (!JSON_CONTAINER_PATTERN.test(trimmedValue)) {
+      return value
+    }
+
+    try {
+      return normalizeJsonNode(JSON.parse(trimmedValue) as JsonNode, depth + 1)
+    } catch {
+      return value
+    }
+  }
+
+  const trimmedInput = rawInput.trim()
+
+  try {
+    return normalizeJsonNode(JSON.parse(trimmedInput) as JsonNode)
+  } catch (directError) {
+    if (!ESCAPED_SEQUENCE_PATTERN.test(trimmedInput)) {
+      throw directError
+    }
+
+    try {
+      const decodedInput = JSON.parse(`"${trimmedInput}"`) as string
+      return normalizeJsonNode(JSON.parse(decodedInput) as JsonNode)
+    } catch {
+      throw directError
+    }
+  }
+}
+
 export function JsonFormatter() {
   const { value: input, setValue: setInput, undo, redo, canUndo, canRedo, reset } = useUndoRedo()
   const [parsedData, setParsedData] = useState<JsonNode | null>(null)
@@ -42,7 +92,7 @@ export function JsonFormatter() {
     }
 
     try {
-      const parsed = JSON.parse(input) as JsonNode
+      const parsed = parseJsonWithEscapedContent(input)
       setParsedData(parsed)
       const space = compress ? 0 : indent
       const formatted = JSON.stringify(parsed, null, space)
