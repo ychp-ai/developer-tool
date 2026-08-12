@@ -48,6 +48,7 @@ const MortgageCalculator = lazy(() => import('./tools/lifestyle/MortgageCalculat
 const TextExtractor = lazy(() => import('./tools/text/TextExtractor').then(m => ({ default: m.TextExtractor })))
 const TextLengthCalculator = lazy(() => import('./tools/text/TextLengthCalculator').then(m => ({ default: m.TextLengthCalculator })))
 const Calculator = lazy(() => import('./tools/calculator/Calculator').then(m => ({ default: m.Calculator })))
+const OpenSourceProjects = lazy(() => import('./pages/OpenSourceProjects').then(m => ({ default: m.OpenSourceProjects })))
 
 const lazyRoutes: Array<{ path: string; Component: React.LazyExoticComponent<React.ComponentType> }> = [
   { path: 'json-formatter', Component: JsonFormatter },
@@ -88,6 +89,7 @@ const lazyRoutes: Array<{ path: string; Component: React.LazyExoticComponent<Rea
   { path: 'text-extractor', Component: TextExtractor },
   { path: 'text-length-calculator', Component: TextLengthCalculator },
   { path: 'calculator', Component: Calculator },
+  { path: 'open-source-projects', Component: OpenSourceProjects },
 ]
 
 const router = createBrowserRouter([

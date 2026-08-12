@@ -198,11 +198,10 @@ const menuGroups: MenuGroup[] = [
     icon: Github,
     tools: [
       {
-        path: 'https://github.com/ychp/SpendScope',
-        name: 'SpendScope',
+        path: '/open-source-projects',
+        name: '开源项目',
         icon: WalletCards,
-        description: '自研软件开源代码',
-        isExternal: true,
+        description: '自研软件与开源代码',
       },
     ],
   },
