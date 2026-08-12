@@ -1,4 +1,7 @@
+import { useState, useRef, useEffect, useCallback } from 'react'
+import type { ReactNode } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import type { LucideIcon } from 'lucide-react'
 import { 
   Code2, 
   Hash, 
@@ -37,14 +40,61 @@ import {
   FileText,
   Layers,
   Building,
-  Type
+  Type,
+  Github,
+  WalletCards,
+  ExternalLink,
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { PWAInstallPrompt } from '../components/ui/PWAInstallPrompt'
-import { useState, useRef, useEffect, useCallback } from 'react'
 
-const menuGroups = [
+interface MenuTool {
+  path: string
+  name: string
+  icon: LucideIcon
+  description?: string
+  isExternal?: boolean
+}
+
+interface MenuGroup {
+  name: string
+  icon: LucideIcon
+  tools: MenuTool[]
+}
+
+interface MenuToolLinkProps {
+  tool: MenuTool
+  className: string
+  children: ReactNode
+  onClick?: () => void
+  title?: string
+}
+
+function MenuToolLink({ tool, className, children, onClick, title }: MenuToolLinkProps) {
+  if (tool.isExternal) {
+    return (
+      <a
+        href={tool.path}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+        onClick={onClick}
+        title={title}
+      >
+        {children}
+      </a>
+    )
+  }
+
+  return (
+    <Link to={tool.path} className={className} onClick={onClick} title={title}>
+      {children}
+    </Link>
+  )
+}
+
+const menuGroups: MenuGroup[] = [
   {
     name: '格式化',
     icon: FileCode,
@@ -143,6 +193,19 @@ const menuGroups = [
       { path: '/image-size-calculator', name: '图像尺寸计算器', icon: Calculator },
     ]
   },
+  {
+    name: '自研开源',
+    icon: Github,
+    tools: [
+      {
+        path: 'https://github.com/ychp/SpendScope',
+        name: 'SpendScope',
+        icon: WalletCards,
+        description: '自研软件开源代码',
+        isExternal: true,
+      },
+    ],
+  },
 ]
 
 export function Layout() {
@@ -203,10 +266,13 @@ export function Layout() {
     }
   }, [location.pathname, searchQuery])
 
-  const isToolActive = (path: string) => location.pathname === path
+  const isToolActive = useCallback(
+    (tool: MenuTool) => !tool.isExternal && location.pathname === tool.path,
+    [location.pathname],
+  )
   const isGroupActive = useCallback((group: typeof menuGroups[0]) =>
-    group.tools.some(tool => isToolActive(tool.path))
-  , [location.pathname])
+    group.tools.some(isToolActive)
+  , [isToolActive])
 
   const filteredMenuGroups = searchQuery
     ? menuGroups.map(group => ({
@@ -292,7 +358,11 @@ export function Layout() {
           e.preventDefault()
           const selectedTool = flattenedTools[selectedSearchIndex]
           if (selectedTool) {
-            navigate(selectedTool.path)
+            if (selectedTool.isExternal) {
+              window.open(selectedTool.path, '_blank', 'noopener,noreferrer')
+            } else {
+              navigate(selectedTool.path)
+            }
             setSearchQuery('')
             setSelectedSearchIndex(-1)
             if (window.innerWidth < 1024) {
@@ -393,13 +463,13 @@ export function Layout() {
               className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 mb-4 ${
                 sidebarCollapsed ? 'justify-center' : 'space-x-3'
               } ${
-                isToolActive('/')
+                location.pathname === '/'
                   ? 'bg-gradient-to-r from-sky-300 to-blue-300 dark:from-sky-500/50 dark:to-blue-500/50 text-sky-700 dark:text-slate-200 shadow-sm shadow-sky-300/20 dark:shadow-sky-500/20'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 dark:hover:from-slate-800/60 dark:hover:to-slate-700/60 hover:text-sky-700 dark:hover:text-slate-200'
               }`}
               onClick={() => setSidebarOpen(false)}
             >
-              <div className={`p-1.5 rounded-md transition-colors ${isToolActive('/') ? 'bg-gradient-to-br from-sky-300 to-blue-300 dark:from-sky-500 dark:to-blue-500 text-sky-700 dark:text-white' : 'bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400'}`}>
+              <div className={`p-1.5 rounded-md transition-colors ${location.pathname === '/' ? 'bg-gradient-to-br from-sky-300 to-blue-300 dark:from-sky-500 dark:to-blue-500 text-sky-700 dark:text-white' : 'bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400'}`}>
                 <Home className="h-3.5 w-3.5 shrink-0" />
               </div>
               {!sidebarCollapsed && <span className="font-semibold">首页</span>}
@@ -473,10 +543,10 @@ export function Layout() {
                             const ToolIcon = tool.icon
                             return (
                               <div key={tool.path} className="relative group/fav-tool">
-                                <Link
-                                  to={tool.path}
+                                <MenuToolLink
+                                  tool={tool}
                                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-200 ${
-                                    isToolActive(tool.path)
+                                    isToolActive(tool)
                                       ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 font-medium'
                                       : 'text-slate-700 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-amber-950/30'
                                   }`}
@@ -487,7 +557,8 @@ export function Layout() {
                                 >
                                   <ToolIcon className="h-4 w-4 shrink-0 opacity-70" />
                                   <span className="truncate flex-1">{tool.name}</span>
-                                </Link>
+                                  {tool.isExternal && <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden="true" />}
+                                </MenuToolLink>
                                 <button
                                   onClick={(e) => {
                                     toggleFavorite(tool.path, e)
@@ -545,10 +616,10 @@ export function Layout() {
                             const ToolIcon = tool.icon
                             return (
                               <div key={tool.path} className="relative group/recent-tool">
-                                <Link
-                                  to={tool.path}
+                                <MenuToolLink
+                                  tool={tool}
                                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-200 ${
-                                    isToolActive(tool.path)
+                                    isToolActive(tool)
                                       ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 font-medium'
                                       : 'text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
                                   }`}
@@ -559,7 +630,7 @@ export function Layout() {
                                 >
                                   <ToolIcon className="h-4 w-4 shrink-0 opacity-70" />
                                   <span className="truncate flex-1">{tool.name}</span>
-                                </Link>
+                                </MenuToolLink>
                                 <button
                                   onClick={(e) => {
                                     removeFromRecent(tool.path, e)
@@ -620,23 +691,24 @@ export function Layout() {
                                 key={tool.path}
                                 className="relative group/tool"
                               >
-                                <Link
-                                  to={tool.path}
+                                <MenuToolLink
+                                  tool={tool}
                                   className={`flex items-center justify-between space-x-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
                                     isSelected
                                       ? 'bg-gradient-to-r from-sky-400 to-blue-400 dark:from-sky-600 dark:to-blue-600 text-white shadow-md -ml-2 pr-8 ring-2 ring-sky-500 dark:ring-sky-400'
-                                      : isToolActive(tool.path)
+                                      : isToolActive(tool)
                                       ? 'bg-gradient-to-r from-sky-200 to-blue-200 dark:from-sky-500/30 dark:to-blue-500/30 text-sky-800 dark:text-slate-200 shadow-sm -ml-2 pr-8'
                                       : 'text-slate-600 dark:text-slate-300 hover:bg-gradient-to-r hover:from-sky-50 hover:to-blue-50 dark:hover:from-slate-800/60 dark:hover:to-slate-700/60 hover:text-sky-700 dark:hover:text-slate-200 hover:-ml-2 pr-8'
                                   }`}
                                   onClick={() => setSidebarOpen(false)}
-                                  title={tool.name}
+                                  title={tool.isExternal ? `${tool.name}（新标签页打开）` : tool.name}
                                 >
                                   <div className="flex items-center space-x-2.5 overflow-hidden">
                                     <ToolIcon className="h-3.5 w-3.5 shrink-0" />
                                     <span className="truncate">{tool.name}</span>
+                                    {tool.isExternal && <ExternalLink className="h-3 w-3 shrink-0 opacity-60" aria-hidden="true" />}
                                   </div>
-                                </Link>
+                                </MenuToolLink>
                                 <button
                                   onClick={(e) => toggleFavorite(tool.path, e)}
                                   className={`absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover/tool:opacity-100 transition-all ${
@@ -700,10 +772,10 @@ export function Layout() {
                               const ToolIcon = tool.icon
                               return (
                                 <div key={tool.path} className="relative group/tool-popup">
-                                  <Link
-                                    to={tool.path}
+                                  <MenuToolLink
+                                    tool={tool}
                                     className={`flex items-center justify-between space-x-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                                      isToolActive(tool.path)
+                                      isToolActive(tool)
                                         ? 'bg-accent text-accent-foreground'
                                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                                     }`}
@@ -715,8 +787,9 @@ export function Layout() {
                                     <div className="flex items-center space-x-2 overflow-hidden">
                                       <ToolIcon className="h-4 w-4 shrink-0" />
                                       <span className="truncate">{tool.name}</span>
+                                      {tool.isExternal && <ExternalLink className="h-3 w-3 shrink-0 opacity-60" aria-hidden="true" />}
                                     </div>
-                                  </Link>
+                                  </MenuToolLink>
                                   <button
                                     onClick={(e) => {
                                       toggleFavorite(tool.path, e)
