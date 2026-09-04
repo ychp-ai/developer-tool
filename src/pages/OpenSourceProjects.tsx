@@ -26,19 +26,22 @@ interface OpenSourceProject {
 
 const projects: OpenSourceProject[] = [
   {
-    name: 'SpendScope',
+    name: 'CodexVista',
     description:
-      '在 macOS 菜单栏查看 Codex Token 用量、额度状态和使用趋势，将本机分散的使用记录整理成清晰的摘要与详细看板。',
-    repositoryUrl: 'https://github.com/ychp/SpendScope',
-    releasesUrl: 'https://github.com/ychp/SpendScope/releases',
+      '面向 Codex 用户的原生 macOS 用量看板，将本机 Codex CLI 与 macOS 应用的 Token、额度、项目和调用记录汇总为菜单栏或刘海摘要与详细看板。第三方本地工具，非 OpenAI 官方产品。',
+    repositoryUrl: 'https://github.com/ychp-ai/CodexVista',
+    releasesUrl: 'https://github.com/ychp-ai/CodexVista/releases',
     type: 'macOS 菜单栏应用',
     platform: 'macOS 14+',
-    dataPolicy: '仅在本机处理',
+    dataPolicy: '本地统计，不上传使用数据',
     technologies: ['Swift', 'SwiftUI', 'AppKit', 'Swift Charts', 'SQLite'],
     features: [
-      '查看 5 小时与 7 天额度、Token 构成和重置时间',
-      '通过趋势图和月度日历观察每日使用变化',
-      '按 Skills、Tools、工作区和模型分析用量',
+      '菜单栏或刘海下方展示 7 天额度与重置倒计时，支持额度提醒',
+      '汇总今日、7 日、30 日、累计及可选订阅周期用量，拆分四类 Token',
+      '通过趋势图与月度热力日历定位使用高峰',
+      '按 Skills、Tools、项目和模型分析用量，统计项目 AI 工作时长',
+      '从今日任务下钻到回复详情，查看状态、耗时、模型及调用明细',
+      '提供六款皮肤、看板置顶、增量刷新与 GitHub Releases 更新检查',
     ],
   },
 ]
