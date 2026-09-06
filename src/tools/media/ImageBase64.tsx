@@ -138,12 +138,12 @@ export function ImageBase64() {
       {/* 操作按钮 */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex flex-wrap items-center justify-between gap-3">
             <span className="flex items-center gap-2">
               <FileImage className="h-5 w-5 text-sky-500" />
               文件操作
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
               <Button variant="outline" size="sm" onClick={loadSampleImage}>
                 示例
               </Button>
@@ -265,7 +265,7 @@ export function ImageBase64() {
         {/* Base64 输出 */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex flex-wrap items-center justify-between gap-3">
               <span>Base64 输出</span>
               <Button
                 variant="outline"

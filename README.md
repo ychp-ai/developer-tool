@@ -2,7 +2,7 @@
 
 > 项目源码：[https://github.com/ychp/developer-tool](https://github.com/ychp/developer-tool)
 
-一个现代化的在线工具箱，提供 39 种实用工具，覆盖 12 大分类，满足开发者、AI 从业者与日常生活的各类需求。
+一个现代化的在线工具箱，提供 40 种实用工具，覆盖 12 大分类，满足开发者、AI 从业者与日常生活的各类需求。
 
 ## ✨ 特性
 
@@ -10,9 +10,9 @@
 - 📱 响应式设计，完美支持移动端和桌面端
 - 🎨 使用 Tailwind CSS 打造精美 UI
 - 🛡️ 完全类型安全的 TypeScript 实现
-- 📦 39 种实用工具，12 大分类
+- 📦 40 种实用工具，12 大分类
 - 🔒 所有数据在本地处理，保护隐私
-- ⚡ 路由懒加载，首屏加载仅 425KB（减少 94%）
+- ⚡ 工具按路由懒加载，重型依赖单独分包
 - 🌙 深色模式支持
 - ⌨️ 键盘快捷键支持（Ctrl+K 搜索、ESC 关闭、方向键导航）
 - 🎯 骨架屏加载，流畅的用户体验
@@ -70,7 +70,7 @@
 - **区号查询** - 查询全国各地电话区号
 - **房贷计算器** - 商业贷款/公积金/组合贷款月供计算
 
-### AI 工具（10 个）
+### AI 工具（11 个）
 - **Token 计算器** - 计算文本的 Token 数量（支持多种模型）
 - **AI 价格计算器** - 计算不同 AI 模型的 API 调用成本
 - **Function Calling 生成器** - 可视化生成 OpenAI Function Calling JSON Schema
@@ -80,6 +80,7 @@
 - **Markdown → Prompt** - Markdown 转 Prompt 格式
 - **Few-shot 格式化** - 格式化 Few-shot 学习示例
 - **图像尺寸计算器** - 计算图像的 Token 消耗（GPT-4V/Claude 3）
+- **RAG 文本分块器** - 按 Token、字符、段落或句子分块，支持重叠
 - **向量相似度计算** - 计算向量间的余弦相似度、欧氏距离、点积
 
 ## 🎯 技术栈
@@ -118,7 +119,7 @@
 ## 🌟 功能亮点
 
 ### 性能优化
-- **路由懒加载** - 39 个工具组件按需加载
+- **路由懒加载** - 40 个工具组件按需加载
 - **代码分割** - 精细化分割大型第三方库
   - vendor-react - React 核心
   - vendor-xlsx - Excel 处理
@@ -126,7 +127,7 @@
   - vendor-lunar - 农历库（按需加载）
   - vendor-prettier - 代码格式化（按需加载）
   - vendor-sql-formatter - SQL 格式化（按需加载）
-- **初始加载优化** - 从 7MB+ 减少到 425KB
+- **初始加载优化** - 工具模块按需加载；PWA 安装时仍会预缓存离线资源
 
 ### 键盘快捷键
 - **Ctrl+K (Cmd+K)** - 聚焦搜索框
@@ -243,7 +244,7 @@ developer-tools/
 │   ├── pages/               # 页面组件
 │   │   ├── Home.tsx         # 首页
 │   │   └── NotFound.tsx     # 404 页面
-│   ├── tools/               # 工具组件 (39个)
+│   ├── tools/               # 工具组件 (40个)
 │   │   ├── ai/              # AI 工具 (11个)
 │   │   ├── browser/         # 浏览器扩展 (1个)
 │   │   ├── calculator/      # 计算器 (1个)
@@ -256,7 +257,9 @@ developer-tools/
 │   │   ├── text/            # 文本处理 (5个)
 │   │   └── utils/           # 数据工具 (1个)
 │   ├── App.tsx
-│   ├── main.tsx             # 入口文件（路由配置）
+│   ├── app/                 # App 装配、路由与错误/加载边界
+│   ├── features/            # 工具注册表、导航行为与主题契约
+│   ├── main.tsx             # DOM 启动入口
 │   ├── pwa.ts               # PWA 注册
 │   └── index.css            # 全局样式
 ├── public/                  # 公共静态资源
@@ -269,13 +272,31 @@ developer-tools/
 └── AGENTS.md                # AI 智能体指南
 ```
 
+## 架构约定
+
+- `app/` 负责装配 Provider、Router、Suspense 和错误边界；`main.tsx` 只启动应用。
+- `features/tool-registry/` 是工具入口的唯一来源。`load` 必须使用动态导入，不能静态导入工具组件或重型库。
+- `features/navigation/` 管理搜索、菜单展开、收藏和最近访问；`layouts/` 负责外壳展示。
+- `tools/<分类>/` 保留独立的工具页面。复杂计算放入同分类的 `lib/`，不要依赖导航或应用入口。
+- `components/`、`hooks/`、`lib/` 提供共享能力，不反向依赖 `app/`。主题 Hook 从 `hooks/useTheme` 导入。
+- 本地存储是不可靠的外部能力；共享存储辅助函数负责格式校验和不可用时的降级，沿用已有存储键。
+- 每个工具路由有独立错误边界，切换工具时重置；顶层边界保护应用装配。
+
+```bash
+npm run build
+npm run lint
+npm test  # Node.js 22.18+，原生 TypeScript 类型擦除与 node:test
+```
+
+`tests/` 覆盖注册表完整性、撤销重做分支、存储容错、分块边界和 Markdown 转换。修改工具时，还需在生产预览中验证输入/输出、文件和复制操作，以及浅色/深色、桌面/移动端。第三方号码/邮编接口应单独核验，固定响应测试不能证明真实服务可用。
+
 ## 🔧 开发指南
 
 ### 添加新工具
 
 1. 在 `src/tools/` 对应分类目录下创建新的工具组件
-2. 在 `src/layouts/Layout.tsx` 的 `menuGroups` 添加工具信息
-3. 在 `src/main.tsx` 添加懒加载配置和路由
+2. 在 `src/features/tool-registry/registry.ts` 对应分组添加名称、路径、图标、渐变和 `load` 动态导入
+3. 首页、导航、搜索和 `src/app/router.tsx` 自动消费注册表，无需重复配置
 
 ### 组件规范
 

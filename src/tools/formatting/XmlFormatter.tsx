@@ -43,6 +43,7 @@ export function XmlFormatter() {
     try {
       const parser = new DOMParser()
       const xmlDoc = parser.parseFromString(xmlString, 'text/xml')
+      if (xmlDoc.querySelector('parsererror')) return null
       
       const parseNode = (element: Element): XmlNode => {
         const node: XmlNode = {

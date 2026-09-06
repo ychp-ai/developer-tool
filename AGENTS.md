@@ -10,7 +10,7 @@
 - React 19 + TypeScript + Vite（Rolldown）
 - React Router v7
 - Tailwind CSS + Radix UI
-- 39 个懒加载工具组件
+- 40 个懒加载工具组件
 
 **核心特性**:
 - 路由懒加载（首屏仅 425KB）
@@ -30,7 +30,7 @@ src/
 ├── hooks/              # 自定义 Hooks
 ├── layouts/            # 布局组件
 ├── pages/              # 页面组件
-├── tools/              # 工具组件 (39个)
+├── tools/              # 工具组件 (40个)
 │   ├── ai/             # AI 工具 (11个)
 │   ├── browser/        # 浏览器扩展 (1个)
 │   ├── calculator/     # 计算器 (1个)
@@ -493,7 +493,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { CopyButton } from '@/components/tool/CopyButton'
-import { useTheme } from '@/contexts/ThemeContext'
+import { useTheme } from '@/hooks/useTheme'
 ```
 
 **文件结构**
@@ -707,43 +707,25 @@ export function NewTool() {
 }
 ```
 
-#### 步骤 2: 在 Layout.tsx 注册工具
+#### 步骤 2: 在统一注册表注册工具
 
-编辑 `src/layouts/Layout.tsx`，找到 `menuGroups` 数组并添加：
-
-```typescript
-const menuGroups: MenuGroup[] = [
-  // ... 其他分组
-  {
-    name: '分类名称',
-    icon: IconName, // 从 lucide-react 导入
-    tools: [
-      // ... 其他工具
-      {
-        name: '新工具名称',
-        path: '/new-tool',
-        icon: IconName,
-        description: '工具描述',
-      },
-    ],
-  },
-]
-```
-
-#### 步骤 3: 在 main.tsx 添加懒加载
-
-编辑 `src/main.tsx`：
+编辑 `src/features/tool-registry/registry.ts` 的对应分组，添加工具定义：
 
 ```typescript
-// 1. 添加懒加载导入
-const NewTool = lazy(() => import('./tools/NewTool').then(m => ({ default: m.NewTool })))
-
-// 2. 在 lazyRoutes 数组添加路由
-const lazyRoutes = [
-  // ... 其他路由
-  { path: 'new-tool', Component: NewTool },
-]
+{
+  name: '新工具名称',
+  path: '/new-tool',
+  icon: IconName,
+  gradient: 'from-sky-500 to-blue-600',
+  load: () => import('../../tools/category/NewTool').then(m => ({ default: m.NewTool })),
+}
 ```
+
+#### 步骤 3: 验证入口一致性
+
+`src/app/router.tsx`、首页、菜单和搜索自动读取注册表，无需再次登记。
+工具业务逻辑放在 `src/tools/<分类>/`；共享组件不依赖应用装配层。
+运行 `npm test` 检查注册表、共享状态和分块边界（Node.js 22.18+）。
 
 #### 步骤 4: 构建验证
 
@@ -1045,9 +1027,9 @@ const { state, setState, undo, redo, canUndo, canRedo } = useUndoRedo(initialSta
 项目使用 Tailwind 的 `dark:` 变体支持深色模式。主题状态通过 `ThemeContext` 管理。
 
 ```typescript
-import { useTheme } from '@/contexts/ThemeContext'
+import { useTheme } from '@/hooks/useTheme'
 
-const { theme, toggleTheme } = useTheme()
+const { theme, setTheme } = useTheme()
 ```
 
 ### 常见问题

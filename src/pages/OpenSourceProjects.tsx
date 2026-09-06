@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 
 import { ToolPageHeader } from '@/components/tool/ToolPageHeader'
-import { buttonVariants } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button-variants'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 

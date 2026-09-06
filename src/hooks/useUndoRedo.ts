@@ -1,51 +1,24 @@
-import { useState, useCallback, useRef } from 'react'
+import { useCallback, useReducer } from 'react'
 
-export function useUndoRedo(initialValue: string = '') {
-  const [value, setValue] = useState(initialValue)
-  const historyRef = useRef<string[]>([initialValue])
-  const [currentIndex, setCurrentIndex] = useState(0)
+import { historyReducer } from '@/lib/history'
 
-  const updateValue = useCallback((newValue: string) => {
-    setValue(newValue)
-    
-    const newHistory = historyRef.current.slice(0, currentIndex + 1)
-    newHistory.push(newValue)
-    historyRef.current = newHistory
-    setCurrentIndex(newHistory.length - 1)
-  }, [currentIndex])
-
-  const undo = useCallback(() => {
-    if (currentIndex > 0) {
-      const newIndex = currentIndex - 1
-      setCurrentIndex(newIndex)
-      setValue(historyRef.current[newIndex])
-    }
-  }, [currentIndex])
-
-  const redo = useCallback(() => {
-    if (currentIndex < historyRef.current.length - 1) {
-      const newIndex = currentIndex + 1
-      setCurrentIndex(newIndex)
-      setValue(historyRef.current[newIndex])
-    }
-  }, [currentIndex])
-
-  const canUndo = currentIndex > 0
-  const canRedo = currentIndex < historyRef.current.length - 1
-
-  const reset = useCallback((newValue: string = '') => {
-    setValue(newValue)
-    historyRef.current = [newValue]
-    setCurrentIndex(0)
-  }, [])
+export function useUndoRedo(initialValue = '') {
+  const [state, dispatch] = useReducer(historyReducer, initialValue, (value) => ({
+    entries: [value],
+    index: 0,
+  }))
+  const setValue = useCallback((value: string) => dispatch({ type: 'set', value }), [])
+  const undo = useCallback(() => dispatch({ type: 'undo' }), [])
+  const redo = useCallback(() => dispatch({ type: 'redo' }), [])
+  const reset = useCallback((value = '') => dispatch({ type: 'reset', value }), [])
 
   return {
-    value,
-    setValue: updateValue,
+    value: state.entries[state.index],
+    setValue,
     undo,
     redo,
-    canUndo,
-    canRedo,
-    reset
+    canUndo: state.index > 0,
+    canRedo: state.index < state.entries.length - 1,
+    reset,
   }
 }

@@ -23,7 +23,8 @@ export function RegexTester() {
       const regex = new RegExp(pattern, flags)
       
       const matches: MatchResult[] = []
-      const globalMatch = testString.matchAll(regex)
+      const firstMatch = regex.global ? null : regex.exec(testString)
+      const globalMatch = regex.global ? testString.matchAll(regex) : (firstMatch ? [firstMatch] : [])
       
       for (const match of globalMatch) {
         matches.push({

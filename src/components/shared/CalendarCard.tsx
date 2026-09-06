@@ -271,7 +271,7 @@ export function CalendarCard() {
       }
     }, 60000)
     return () => clearInterval(timer)
-  }, [])
+  }, [today])
 
   const lunar = today.getLunar()
 

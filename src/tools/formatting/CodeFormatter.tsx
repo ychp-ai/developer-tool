@@ -532,12 +532,12 @@ export function CodeFormatter() {
       {/* 控制面板 */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex flex-wrap items-center justify-between gap-3">
             <span className="flex items-center gap-2">
               <Code2 className="h-5 w-5 text-sky-500" />
               格式化设置
             </span>
-            <div className="flex items-center gap-3">
+            <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value as Language)}

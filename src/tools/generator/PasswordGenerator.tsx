@@ -14,6 +14,8 @@ export function PasswordGenerator() {
   const [copied, setCopied] = useState(false)
 
   const password = useMemo(() => {
+    // Regenerate even when the selected character options have not changed.
+    void refresh
     let chars = ''
     if (includeUppercase) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     if (includeLowercase) chars += 'abcdefghijklmnopqrstuvwxyz'

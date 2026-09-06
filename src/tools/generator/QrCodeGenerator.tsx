@@ -34,7 +34,7 @@ export function QrCodeGenerator() {
 
   useEffect(() => {
     generateQR()
-  }, [text, size, fgColor, bgColor, level])
+  }, [generateQR])
 
   const downloadQrCode = () => {
     const canvas = canvasRef.current

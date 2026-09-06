@@ -12,7 +12,7 @@ export default defineConfig({
       manifest: {
         name: '在线工具箱',
         short_name: '工具箱',
-        description: '26+ 种实用工具，满足您的工作与生活需求',
+        description: '免费实用工具，满足您的工作与生活需求',
         theme_color: '#0ea5e9',
         background_color: '#ffffff',
         display: 'standalone',
@@ -70,7 +70,7 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+            if (/[/\\]node_modules[/\\](react|react-dom|react-router|react-router-dom|scheduler)[/\\]/.test(id)) {
               return 'vendor-react'
             }
             if (id.includes('@radix-ui')) {

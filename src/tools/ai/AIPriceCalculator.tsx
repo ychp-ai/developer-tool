@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { DollarSign, Info, Plus, Trash2, ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -41,13 +41,13 @@ export function AIPriceCalculator() {
   const [sortField, setSortField] = useState<SortField>('totalCost')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
 
-  const calculateCost = (modelKey: string) => {
+  const calculateCost = useCallback((modelKey: string) => {
     const model = models[modelKey]
     const input = parseInt(inputTokens) || 0
     const output = parseInt(outputTokens) || 0
     
-    let inputCost = input * model.inputPrice
-    let outputCost = output * model.outputPrice
+    let inputCost = (input / 1000) * model.inputPrice
+    let outputCost = (output / 1000) * model.outputPrice
     
     if (currency === 'CNY') {
       inputCost *= USD_TO_CNY
@@ -59,7 +59,7 @@ export function AIPriceCalculator() {
       outputCost,
       totalCost: inputCost + outputCost
     }
-  }
+  }, [inputTokens, outputTokens, currency])
 
   const comparisonData = useMemo(() => {
     const data = selectedModels.map(key => {
@@ -103,7 +103,7 @@ export function AIPriceCalculator() {
       }
       return sortOrder === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number)
     })
-  }, [selectedModels, inputTokens, outputTokens, currency, sortField, sortOrder])
+  }, [selectedModels, calculateCost, sortField, sortOrder])
 
   const addModel = (modelKey: string) => {
     if (!selectedModels.includes(modelKey)) {
@@ -292,7 +292,7 @@ export function AIPriceCalculator() {
             <ArrowUpDown className="w-5 h-5 text-sky-500" />
             成本对比结果
             <span className="text-sm font-normal text-slate-500 dark:text-slate-400 ml-2">
-              ({currencySymbol} / 1K tokens)
+              ({currencySymbol}，按输入的 Token 数量计算)
             </span>
           </h2>
 

@@ -13,27 +13,6 @@ interface ConversionOptions {
   showTypes: boolean
 }
 
-export function JsonToPrompt() {
-  const [jsonInput, setJsonInput] = useState(`{
-  "name": "张三",
-  "age": 28,
-  "email": "zhangsan@example.com",
-  "skills": ["JavaScript", "TypeScript", "React"],
-  "experience": {
-    "company": "ABC科技",
-    "position": "前端工程师",
-    "years": 3
-  }
-}`)
-  const [copied, setCopied] = useState(false)
-  const [options, setOptions] = useState<ConversionOptions>({
-    format: 'markdown',
-    includeContext: true,
-    contextText: '请根据以下 JSON 数据回答问题：',
-    indent: 2,
-    showTypes: false
-  })
-
   const formatValue = (value: unknown, indent: number, showTypes: boolean): string => {
     const spaces = ' '.repeat(indent)
     
@@ -86,6 +65,7 @@ export function JsonToPrompt() {
       })
       .join('\n')
   }
+
 
   const convertToMarkdown = (data: Record<string, unknown>, opts: ConversionOptions): string => {
     let result = ''
@@ -179,6 +159,28 @@ export function JsonToPrompt() {
     
     return result
   }
+
+
+export function JsonToPrompt() {
+  const [jsonInput, setJsonInput] = useState(`{
+  "name": "张三",
+  "age": 28,
+  "email": "zhangsan@example.com",
+  "skills": ["JavaScript", "TypeScript", "React"],
+  "experience": {
+    "company": "ABC科技",
+    "position": "前端工程师",
+    "years": 3
+  }
+}`)
+  const [copied, setCopied] = useState(false)
+  const [options, setOptions] = useState<ConversionOptions>({
+    format: 'markdown',
+    includeContext: true,
+    contextText: '请根据以下 JSON 数据回答问题：',
+    indent: 2,
+    showTypes: false
+  })
 
   const { output, error } = useMemo(() => {
     if (!jsonInput.trim()) {

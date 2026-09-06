@@ -364,7 +364,7 @@ export function TokenCalculator() {
       {/* 计算结果 */}
       <Card className="bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30 border-sky-200 dark:border-sky-800">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Calculator className="h-5 w-5 text-sky-500" />
               计算结果
@@ -446,7 +446,7 @@ export function TokenCalculator() {
       {/* 输入区域 */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex flex-wrap items-center justify-between gap-3">
             <span className="flex items-center gap-2">
               <Variable className="h-5 w-5 text-sky-500" />
               输入文本
@@ -458,26 +458,26 @@ export function TokenCalculator() {
                 >
                   <Info className="h-4 w-4" />
                 </button>
-                <div className="absolute top-full left-0 mt-2 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                <div className="absolute top-full -left-12 sm:left-0 mt-2 w-64 sm:w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
                   <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 p-4">
                     <div className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
                       <Info className="h-4 w-4 text-sky-500" />
                       使用说明
                     </div>
                     <div className="text-sm text-slate-600 dark:text-slate-400 space-y-2.5">
-                      <p className="whitespace-nowrap">• <strong>变量填充</strong>：使用 {'{变量名}'} 作为占位符</p>
-                      <p className="whitespace-nowrap">• 1 Token ≈ 4 个英文字符或 0.75 个汉字</p>
-                      <p className="whitespace-nowrap">• 不同模型使用不同分词器，结果略有差异</p>
-                      <p className="whitespace-nowrap">• 使用 js-tiktoken 库，与 OpenAI API 基本一致</p>
-                      <p className="whitespace-nowrap">• 非 OpenAI 模型使用相近编码估算</p>
-                      <p className="whitespace-nowrap">• 开启可视化可查看每个 Token 的边界</p>
+                      <p className="whitespace-normal">• <strong>变量填充</strong>：使用 {'{变量名}'} 作为占位符</p>
+                      <p className="whitespace-normal">• 1 Token ≈ 4 个英文字符或 0.75 个汉字</p>
+                      <p className="whitespace-normal">• 不同模型使用不同分词器，结果略有差异</p>
+                      <p className="whitespace-normal">• 使用 js-tiktoken 库，与 OpenAI API 基本一致</p>
+                      <p className="whitespace-normal">• 非 OpenAI 模型使用相近编码估算</p>
+                      <p className="whitespace-normal">• 开启可视化可查看每个 Token 的边界</p>
                     </div>
                     <div className="absolute top-0 left-4 -translate-y-1/2 rotate-45 w-2.5 h-2.5 bg-white dark:bg-slate-800 border-t border-l border-slate-200 dark:border-slate-700"></div>
                   </div>
                 </div>
               </div>
             </span>
-            <div className="flex items-center gap-3">
+            <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
               <span className="text-sm px-3 py-1 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300">
                 {selectedModel.name}
               </span>

@@ -2,7 +2,7 @@ import { Component, type ReactNode } from 'react'
 import { AlertCircle, RefreshCw, Home } from 'lucide-react'
 import { Button } from './button'
 
-interface Props {
+export interface ErrorBoundaryProps {
   children: ReactNode
 }
 
@@ -11,8 +11,8 @@ interface State {
   error?: Error
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
+  constructor(props: ErrorBoundaryProps) {
     super(props)
     this.state = { hasError: false }
   }
@@ -26,6 +26,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleRetry = () => {
+    // A rejected lazy import stays cached by React; reload to request its module again.
+    if (/dynamically imported|Importing a module|Loading chunk/i.test(this.state.error?.message ?? '')) {
+      window.location.reload()
+      return
+    }
     this.setState({ hasError: false, error: undefined })
   }
 

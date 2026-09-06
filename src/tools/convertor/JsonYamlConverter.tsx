@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ArrowRightLeft, FileJson, FileCode, Copy, Check, Trash2, Download, Upload, AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ToolPageHeader } from '@/components/tool/ToolPageHeader'
@@ -16,7 +16,7 @@ export function JsonYamlConverter() {
   const [copied, setCopied] = useState(false)
   const [indentSpaces, setIndentSpaces] = useState(2)
 
-  const convert = () => {
+  const convert = useCallback(() => {
     if (!input.trim()) {
       setOutput('')
       setError('')
@@ -47,11 +47,11 @@ export function JsonYamlConverter() {
       setError(errorMessage)
       setOutput('')
     }
-  }
+  }, [input, direction, indentSpaces])
 
   useEffect(() => {
     convert()
-  }, [input, direction, indentSpaces])
+  }, [convert])
 
   const swapDirection = () => {
     const newDirection = direction === 'json-to-yaml' ? 'yaml-to-json' : 'json-to-yaml'

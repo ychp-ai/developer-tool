@@ -2,17 +2,8 @@ import { useState, useMemo } from 'react'
 import { FileText, Copy, Check, Wand2, Sparkles, Code, List, Type } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-
-type OutputFormat = 'plain' | 'structured' | 'clean' | 'code-block'
-
-interface ConversionOptions {
-  preserveHeadings: boolean
-  preserveLists: boolean
-  preserveCodeBlocks: boolean
-  preserveLinks: boolean
-  removeEmptyLines: boolean
-  outputFormat: OutputFormat
-}
+import { convertMarkdown } from './lib/markdown-prompt'
+import type { ConversionOptions } from './lib/markdown-prompt'
 
 const sampleMarkdown = `# API 使用指南
 
@@ -59,63 +50,6 @@ export function MarkdownToPrompt() {
     outputFormat: 'structured'
   })
   const [copied, setCopied] = useState(false)
-
-  const convertMarkdown = (markdown: string, opts: ConversionOptions): string => {
-    let result = markdown
-
-    if (opts.outputFormat === 'plain') {
-      result = result
-        .replace(/^#{1,6}\s+/gm, '')
-        .replace(/`{1,3}[^`]*`{1,3}/g, '')
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-        .replace(/^\s*[-*+]\s+/gm, '• ')
-        .replace(/^\s*\d+\.\s+/gm, '')
-        .replace(/\n{3,}/g, '\n\n')
-    } else if (opts.outputFormat === 'structured') {
-      result = result
-        .replace(/^#{6}\s+(.+)$/gm, '###### $1')
-        .replace(/^#{5}\s+(.+)$/gm, '##### $1')
-        .replace(/^#{4}\s+(.+)$/gm, '#### $1')
-        .replace(/^#{3}\s+(.+)$/gm, '### $1')
-        .replace(/^#{2}\s+(.+)$/gm, '## $1')
-        .replace(/^#{1}\s+(.+)$/gm, '# $1')
-        .replace(/`{3}(\w+)?\n([\s\S]+?)\n`{3}/g, (_match, _lang, code) => {
-          if (!opts.preserveCodeBlocks) return code.trim()
-          return `【代码块】\n${code.trim()}\n【代码块结束】`
-        })
-        .replace(/`([^`]+)`/g, '「$1」')
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, opts.preserveLinks ? '$1（链接）' : '$1')
-    } else if (opts.outputFormat === 'clean') {
-      result = result
-        .replace(/^#{1,6}\s+(.+)$/gm, (_match, title) => {
-          return opts.preserveHeadings ? `▸ ${title}\n` : `${title}\n`
-        })
-        .replace(/^\s*[-*+]\s+/gm, opts.preserveLists ? '○ ' : '')
-        .replace(/^\s*\d+\.\s+/gm, opts.preserveLists ? '' : '')
-        .replace(/`{3}(\w+)?\n([\s\S]+?)\n`{3}/g, (_match, _lang, code) => {
-          if (!opts.preserveCodeBlocks) return code.trim()
-          return `「代码：${code.trim()}」`
-        })
-        .replace(/`([^`]+)`/g, '「$1」')
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, opts.preserveLinks ? '$1' : '$1')
-        .replace(/\n{3,}/g, '\n\n')
-    } else if (opts.outputFormat === 'code-block') {
-      let content = result
-      content = content
-        .replace(/^#{1,6}\s+/gm, opts.preserveHeadings ? '# ' : '')
-        .replace(/`{3}(\w+)?/g, opts.preserveCodeBlocks ? '```' : '')
-        .replace(/`([^`]+)`/g, opts.preserveCodeBlocks ? '`$1`' : '$1')
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, opts.preserveLinks ? '$1 (链接)' : '$1')
-        .replace(/^\s*[-*+]\s+/gm, opts.preserveLists ? '- ' : '')
-      result = '```\n' + content + '\n```'
-    }
-
-    if (opts.removeEmptyLines) {
-      result = result.replace(/\n{3,}/g, '\n\n')
-    }
-
-    return result.trim()
-  }
 
   const output = useMemo(() => {
     if (!input.trim()) return ''
