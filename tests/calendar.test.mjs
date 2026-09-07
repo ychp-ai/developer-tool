@@ -32,3 +32,28 @@ test('countdowns include the following year without inventing missing holiday da
   assert.equal(holiday.daysUntil, 1);
   assert.deepEqual(getHolidayCountdowns(Solar.fromYmd(2099, 12, 31)), []);
 });
+
+test('date input rejects empty, malformed and impossible dates', async () => {
+  const { parseCalendarDate, shiftCalendarMonth } =
+    await import('../src/lib/calendar.ts');
+  for (const value of [
+    '',
+    'NaN-09-07',
+    '2026-02-31',
+    '2025-02-29',
+    '2026-13-01',
+    '1899-12-31',
+    '2101-01-01',
+  ]) {
+    assert.equal(parseCalendarDate(value), null, value);
+  }
+  assert.equal(parseCalendarDate('2024-02-29').toYmd(), '2024-02-29');
+  assert.equal(
+    shiftCalendarMonth(parseCalendarDate('2026-01-31'), 1).toYmd(),
+    '2026-02-28',
+  );
+  assert.equal(
+    shiftCalendarMonth(parseCalendarDate('2026-12-31'), 1).toYmd(),
+    '2027-01-31',
+  );
+});

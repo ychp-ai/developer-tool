@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { ArrowRight, ArrowUpRight, Search, X } from 'lucide-react';
 
 import { homeTools, toolGroups } from '@/features/tool-registry/registry';
+import type { ToolNavigationContext } from '@/features/navigation/types';
 import { CalendarSearchPanel } from '@/components/shared/CalendarSearchPanel';
 
 const categories = toolGroups.filter((group) =>
@@ -20,7 +21,7 @@ const categoryDescriptions: Record<string, string> = {
   生活查询: '也为工作之外的小事省点心',
   'AI 工具': '从提示词到模型，辅助 AI 开发',
 };
-const quickTools = [
+const defaultQuickTools = [
   {
     path: '/json-formatter',
     name: 'JSON 格式化',
@@ -48,24 +49,56 @@ const quickTools = [
 ];
 
 export function Home() {
-  const [query, setQuery] = useState('');
+  const {
+    searchQuery: query,
+    setSearchQuery: setQuery,
+    selectedSearchIndex,
+    homeSearchInputRef,
+    filteredMenuGroups,
+    flattenedTools,
+    favoriteTools,
+    recentToolsList,
+  } = useOutletContext<ToolNavigationContext>();
   const [activeCategory, setActiveCategory] = useState('全部工具');
   const normalizedQuery = query.trim().toLowerCase();
-  const visibleGroups = categories
-    .filter(
-      (group) => activeCategory === '全部工具' || group.name === activeCategory,
-    )
-    .map((group) => ({
-      ...group,
-      tools: group.tools.filter(
-        (tool) =>
-          tool.showOnHome !== false &&
-          `${tool.name} ${tool.description ?? ''} ${group.name}`
-            .toLowerCase()
-            .includes(normalizedQuery),
-      ),
-    }))
-    .filter((group) => group.tools.length > 0);
+  const visibleGroups = normalizedQuery
+    ? filteredMenuGroups
+    : categories
+        .filter(
+          (group) =>
+            activeCategory === '全部工具' || group.name === activeCategory,
+        )
+        .map((group) => ({
+          ...group,
+          tools: group.tools.filter((tool) => tool.showOnHome !== false),
+        }));
+  const quickPaths = [
+    ...new Set([
+      ...favoriteTools.map((tool) => tool.path),
+      ...recentToolsList.map((tool) => tool.path),
+      ...defaultQuickTools.map((tool) => tool.path),
+    ]),
+  ].slice(0, 3);
+  const quickTools = quickPaths.map((path, index) => {
+    const definition = toolGroups
+      .flatMap((group) => group.tools)
+      .find((tool) => tool.path === path)!;
+    const fallback = defaultQuickTools.find((tool) => tool.path === path);
+    return {
+      ...definition,
+      glyph: fallback?.glyph,
+      description:
+        definition.description ??
+        fallback?.description ??
+        `打开${definition.name}`,
+      className: defaultQuickTools[index].className,
+      caption: favoriteTools.some((tool) => tool.path === path)
+        ? '已收藏'
+        : recentToolsList.some((tool) => tool.path === path)
+          ? '最近使用'
+          : '推荐工具',
+    };
+  });
   const resultCount = visibleGroups.reduce(
     (count, group) => count + group.tools.length,
     0,
@@ -97,8 +130,18 @@ export function Home() {
               aria-hidden="true"
             />
             <input
+              ref={homeSearchInputRef}
+              role="combobox"
               aria-label="查找工具"
-              placeholder="想处理什么？搜索 JSON、时间戳、Base64…"
+              aria-autocomplete="list"
+              aria-expanded={Boolean(normalizedQuery)}
+              aria-controls="home-search-results"
+              aria-activedescendant={
+                normalizedQuery && selectedSearchIndex >= 0
+                  ? `home-result-${selectedSearchIndex}`
+                  : undefined
+              }
+              placeholder="搜索全部工具…"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => {
@@ -134,7 +177,7 @@ export function Home() {
               快捷工作区
             </h2>
             <span className="text-xs text-muted-foreground">
-              少一点重复，多一点专注
+              收藏优先，接着上次的工作
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -142,19 +185,21 @@ export function Home() {
               <Link
                 key={tool.path}
                 to={tool.path}
+                target={tool.isExternal ? '_blank' : undefined}
+                rel={tool.isExternal ? 'noopener noreferrer' : undefined}
                 className={`quick-tool ${tool.className}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <span className="quick-tool-glyph" aria-hidden="true">
-                    {tool.glyph}
+                    {tool.glyph ?? <tool.icon className="h-8 w-8" />}
                   </span>
-                  <span className="font-mono text-[10px] tracking-widest opacity-70 hidden sm:inline">
+                  <span className="font-mono text-xs opacity-80 hidden sm:inline">
                     {tool.caption}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2 mt-5">
                   <div>
-                    <h3 className="text-[11px] sm:text-sm font-semibold">
+                    <h3 className="text-xs sm:text-sm font-semibold">
                       {tool.name}
                     </h3>
                     <p className="text-xs mt-1.5 opacity-75 hidden sm:block">
@@ -182,7 +227,7 @@ export function Home() {
           </h2>
           <span className="text-xs text-muted-foreground" role="status">
             {normalizedQuery
-              ? `找到 ${resultCount} 个工具`
+              ? `全局找到 ${resultCount} 个工具`
               : '按需取用，即开即用'}
           </span>
         </div>
@@ -196,9 +241,12 @@ export function Home() {
               <button
                 type="button"
                 key={category}
-                aria-pressed={activeCategory === category}
-                onClick={() => setActiveCategory(category)}
-                className={`category-filter ${activeCategory === category ? 'category-filter-active' : ''}`}
+                aria-pressed={!normalizedQuery && activeCategory === category}
+                onClick={() => {
+                  setQuery('');
+                  setActiveCategory(category);
+                }}
+                className={`category-filter ${!normalizedQuery && activeCategory === category ? 'category-filter-active' : ''}`}
               >
                 {category}
               </button>
@@ -206,7 +254,12 @@ export function Home() {
           )}
         </div>
         {visibleGroups.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+          <div
+            id="home-search-results"
+            role={normalizedQuery ? 'listbox' : undefined}
+            aria-label="工具搜索结果"
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start"
+          >
             {visibleGroups.map((group) => {
               const Icon = group.icon;
               return (
@@ -230,6 +283,20 @@ export function Home() {
                   <div className="p-2.5">
                     {group.tools.map((tool) => {
                       const ToolIcon = tool.icon;
+                      const index = flattenedTools.findIndex(
+                        (item) => item.path === tool.path,
+                      );
+                      const isSelected =
+                        normalizedQuery && index === selectedSearchIndex;
+                      const resultProps = {
+                        id: `home-result-${index}`,
+                        role: normalizedQuery ? 'option' : undefined,
+                        'aria-selected': normalizedQuery
+                          ? Boolean(isSelected)
+                          : undefined,
+                        onClick: () => setQuery(''),
+                        className: `catalog-link ${isSelected ? 'bg-accent text-accent-foreground ring-1 ring-inset ring-primary' : ''}`,
+                      };
                       const content = (
                         <>
                           <ToolIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -247,16 +314,12 @@ export function Home() {
                           href={tool.path}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="catalog-link"
+                          {...resultProps}
                         >
                           {content}
                         </a>
                       ) : (
-                        <Link
-                          key={tool.path}
-                          to={tool.path}
-                          className="catalog-link"
-                        >
+                        <Link key={tool.path} to={tool.path} {...resultProps}>
                           {content}
                         </Link>
                       );
@@ -267,7 +330,12 @@ export function Home() {
             })}
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed p-12 text-center">
+          <div
+            id="home-search-results"
+            role="listbox"
+            aria-label="工具搜索结果"
+            className="rounded-xl border border-dashed p-12 text-center"
+          >
             <Search className="h-7 w-7 text-muted-foreground mx-auto mb-3" />
             <p className="font-medium">没有找到匹配的工具</p>
             <p className="text-sm text-muted-foreground mt-2">

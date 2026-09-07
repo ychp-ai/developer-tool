@@ -46,3 +46,22 @@ function parseDate(value: string): [number, number, number] {
   const [year, month, day] = value.split('-').map(Number);
   return [year, month, day];
 }
+
+/** Validate before constructing Solar: the library accepts invalid dates. */
+export function parseCalendarDate(value: string): Solar | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [year, month, day] = parseDate(value);
+  if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1)
+    return null;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  return day <= daysInMonth ? Solar.fromYmd(year, month, day) : null;
+}
+
+export function shiftCalendarMonth(date: Solar, offset: number): Solar {
+  const next = new Date(date.getYear(), date.getMonth() - 1 + offset, 1);
+  const day = Math.min(
+    date.getDay(),
+    new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate(),
+  );
+  return Solar.fromYmd(next.getFullYear(), next.getMonth() + 1, day);
+}

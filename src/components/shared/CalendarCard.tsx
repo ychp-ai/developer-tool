@@ -1,409 +1,222 @@
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ChevronLeft, ChevronRight, Calendar, ChevronDown } from 'lucide-react'
-import { Solar, HolidayUtil } from 'lunar-typescript'
+import { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { HolidayUtil, Solar } from 'lunar-typescript';
 
-export function CalendarCard() {
-  const [today, setToday] = useState<Solar>(Solar.fromDate(new Date()))
-  const [year, setYear] = useState(today.getYear())
-  const [month, setMonth] = useState(today.getMonth())
-  const [day, setDay] = useState(today.getDay())
-  const [holidayMessages, setHolidayMessages] = useState<string[]>([])
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [currentIndex, setCurrentIndex] = useState(0)
+import { parseCalendarDate, shiftCalendarMonth } from '@/lib/calendar';
+import { Button } from '@/components/ui/button';
 
-  const updateDate = (solar: Solar) => {
-    setToday(solar)
-    setYear(solar.getYear())
-    setMonth(solar.getMonth())
-    setDay(solar.getDay())
-    calHolidayCountDownWithDate(solar)
-  }
+export interface CalendarCardProps {
+  value: string;
+  today: string;
+  onChange: (value: string) => void;
+  onClose: () => void;
+}
 
-  const prevDay = () => {
-    const newDate = today.next(-1)
-    updateDate(newDate)
-  }
-
-  const nextDay = () => {
-    const newDate = today.next(1)
-    updateDate(newDate)
-  }
-
-  const handleYearChange = (value: string) => {
-    const newYear = parseInt(value)
-    setYear(newYear)
-    try {
-      updateDate(Solar.fromYmd(newYear, month, day))
-    } catch {
-      updateDate(Solar.fromYmd(newYear, month, 1))
-    }
-  }
-
-  const handleMonthChange = (value: string) => {
-    const newMonth = parseInt(value)
-    setMonth(newMonth)
-    try {
-      updateDate(Solar.fromYmd(year, newMonth, day))
-    } catch {
-      updateDate(Solar.fromYmd(year, newMonth, 1))
-    }
-  }
-
-  const handleDayChange = (value: string) => {
-    const newDay = parseInt(value)
-    setDay(newDay)
-    try {
-      updateDate(Solar.fromYmd(year, month, newDay))
-    } catch {
-      updateDate(Solar.fromYmd(year, month, 1))
-    }
-  }
-
-  const calHolidayCountDownWithDate = (date: Solar) => {
-    let holidays = HolidayUtil.getHolidays(date.getYear())
-
-    holidays = holidays.filter((item) => !item.isWork())
-
-    const todayYmd = date.toYmd()
-    const todayHoliday = holidays.find(holiday => holiday.getDay() === todayYmd)
-
-    const currentWeek = date.getWeek()
-    let days = 0
-    
-    if (currentWeek === 6) {
-      days = -1
-    } else if (currentWeek === 0) {
-      days = -2
-    } else {
-      days = 6 - currentWeek
-    }
-
-    const groupedHolidays = new Map<string, Solar[]>()
-    holidays.forEach((holiday) => {
-      const name = holiday.getName()
-      if (!groupedHolidays.has(name)) {
-        groupedHolidays.set(name, [])
-      }
-      groupedHolidays.get(name)!.push(Solar.fromDate(new Date(holiday.getDay())))
-    })
-
-    let holidayInfos = Array.from(groupedHolidays.entries()).map(([name, holidays]) => {
-      const earliestHoliday = holidays.reduce((prev, curr) =>
-        prev ? (prev.isBefore(curr) ? prev : curr) : curr
-      )
-      const latestHoliday = holidays.reduce((prev, curr) =>
-        prev ? (prev.isAfter(curr) ? prev : curr) : curr
-      )
-      return {
-        name,
-        earliestDate: earliestHoliday,
-        latestDate: latestHoliday,
-        leftDays: 0
-      }
-    })
-
-    holidayInfos = holidayInfos.sort((a, b) => {
-      if (a.earliestDate.isBefore(b.earliestDate)) return -1
-      if (a.earliestDate.isAfter(b.earliestDate)) return 1
-      return 0
-    })
-
-    holidayInfos = holidayInfos.filter((holiday) => {
-      const isBeforeHoliday = holiday.earliestDate.isAfter(date)
-      const isAfterHoliday = holiday.latestDate.isBefore(date)
-      const isDuringHoliday = !date.isBefore(holiday.earliestDate) && !date.isAfter(holiday.latestDate)
-      return isBeforeHoliday || (isAfterHoliday && !isDuringHoliday)
-    })
-
-    for (const holiday of holidayInfos) {
-      holiday.leftDays = holiday.earliestDate.subtract(date)
-    }
-
-    const messages: string[] = []
-    
-    if (todayHoliday) {
-      const holidayName = todayHoliday.getName()
-      const currentHolidayGroup = Array.from(groupedHolidays.entries()).find(([name]) => name === holidayName)
-      
-      if (currentHolidayGroup) {
-        const holidayDays = currentHolidayGroup[1]
-        const lastDay = holidayDays.reduce((prev, curr) =>
-          prev ? (prev.isAfter(curr) ? prev : curr) : curr
-        )
-        
-        if (lastDay.toYmd() === todayYmd) {
-          messages.push(`${holidayName}最后一天，明天要上班了 😭`)
-        } else {
-          messages.push(`${holidayName}了，好好休息吧~`)
-        }
-      }
-    } else {
-      if (days > 1) {
-        messages.push(`距离周末还有 ${days} 天`)
-      } else if (days === 1) {
-        messages.push('明天就是周末啦~~')
-      } else if (days === -1) {
-        messages.push('今天周末啦！！！')
-      } else if (days === -2) {
-        messages.push('明天要上班，惊不惊喜，意不意外 😄')
-      }
-    }
-
-    holidayInfos.filter(holiday => holiday.leftDays > 0).slice(0, 5).forEach(({ name, leftDays }) => {
-      messages.push(`距离 ${name} 还有 ${leftDays} 天`)
-    })
-
-    setHolidayMessages(messages)
-  }
+export function CalendarCard({
+  value,
+  today,
+  onChange,
+  onClose,
+}: CalendarCardProps) {
+  const selected = parseCalendarDate(value)!;
+  const [view, setView] = useState(() => selected);
+  const [draft, setDraft] = useState(value);
+  const [error, setError] = useState('');
+  const gridRef = useRef<HTMLDivElement>(null);
+  const shouldFocusDate = useRef(false);
+  const first = Solar.fromYmd(view.getYear(), view.getMonth(), 1);
+  const start = first.next(-((first.getWeek() + 6) % 7));
+  const days = Array.from({ length: 42 }, (_, index) => start.next(index));
 
   useEffect(() => {
-    const initializeHolidayCountdown = () => {
-      let holidays = HolidayUtil.getHolidays(today.getYear())
-
-      holidays = holidays.filter((item) => !item.isWork())
-
-      const todayYmd = today.toYmd()
-      const todayHoliday = holidays.find(holiday => holiday.getDay() === todayYmd)
-
-      const currentWeek = today.getWeek()
-      let days = 0
-      
-      if (currentWeek === 6) {
-        days = -1
-      } else if (currentWeek === 0) {
-        days = -2
-      } else {
-        days = 6 - currentWeek
-      }
-
-      const groupedHolidays = new Map<string, Solar[]>()
-      holidays.forEach((holiday) => {
-        const name = holiday.getName()
-        if (!groupedHolidays.has(name)) {
-          groupedHolidays.set(name, [])
-        }
-        groupedHolidays.get(name)!.push(Solar.fromDate(new Date(holiday.getDay())))
-      })
-
-      let holidayInfos = Array.from(groupedHolidays.entries()).map(([name, holidays]) => {
-        const earliestHoliday = holidays.reduce((prev, curr) =>
-          prev ? (prev.isBefore(curr) ? prev : curr) : curr
-        )
-        const latestHoliday = holidays.reduce((prev, curr) =>
-          prev ? (prev.isAfter(curr) ? prev : curr) : curr
-        )
-        return {
-          name,
-          earliestDate: earliestHoliday,
-          latestDate: latestHoliday,
-          leftDays: 0
-        }
-      })
-
-      holidayInfos = holidayInfos.sort((a, b) => {
-        if (a.earliestDate.isBefore(b.earliestDate)) return -1
-        if (a.earliestDate.isAfter(b.earliestDate)) return 1
-        return 0
-      })
-
-      holidayInfos = holidayInfos.filter((holiday) => {
-        const isBeforeHoliday = holiday.earliestDate.isAfter(today)
-        const isAfterHoliday = holiday.latestDate.isBefore(today)
-        const isDuringHoliday = !today.isBefore(holiday.earliestDate) && !today.isAfter(holiday.latestDate)
-        return isBeforeHoliday || (isAfterHoliday && !isDuringHoliday)
-      })
-
-      for (const holiday of holidayInfos) {
-        holiday.leftDays = holiday.earliestDate.subtract(today)
-      }
-
-      const messages: string[] = []
-      
-      if (todayHoliday) {
-        const holidayName = todayHoliday.getName()
-        const currentHolidayGroup = Array.from(groupedHolidays.entries()).find(([name]) => name === holidayName)
-        
-        if (currentHolidayGroup) {
-          const holidayDays = currentHolidayGroup[1]
-          const lastDay = holidayDays.reduce((prev, curr) =>
-            prev ? (prev.isAfter(curr) ? prev : curr) : curr
-          )
-          
-          if (lastDay.toYmd() === todayYmd) {
-            messages.push(`${holidayName}最后一天，明天要上班了 😭`)
-          } else {
-            messages.push(`${holidayName}了，好好休息吧~`)
-          }
-        }
-      } else {
-        if (days > 1) {
-          messages.push(`距离周末还有 ${days} 天`)
-        } else if (days === 1) {
-          messages.push('明天就是周末啦~~')
-        } else if (days === -1) {
-          messages.push('今天周末啦！！！')
-        } else if (days === -2) {
-          messages.push('明天要上班，惊不惊喜，意不意外 😄')
-        }
-      }
-
-      holidayInfos.filter(holiday => holiday.leftDays > 0).slice(0, 5).forEach(({ name, leftDays }) => {
-        messages.push(`距离 ${name} 还有 ${leftDays} 天`)
-      })
-
-      setHolidayMessages(messages)
+    if (shouldFocusDate.current) {
+      gridRef.current
+        ?.querySelector<HTMLButtonElement>(`[data-date="${value}"]`)
+        ?.focus();
+      shouldFocusDate.current = false;
     }
+  }, [value, view]);
 
-    initializeHolidayCountdown()
-    
-    const timer = setInterval(() => {
-      const currentDay = Solar.fromDate(new Date())
-      const todaySolar = Solar.fromYmd(
-        new Date().getFullYear(),
-        new Date().getMonth() + 1,
-        new Date().getDate()
-      )
-      if (currentDay.toYmd() !== todaySolar.toYmd()) {
-        setToday(currentDay)
-      }
-    }, 60000)
-    return () => clearInterval(timer)
-  }, [today])
-
-  const lunar = today.getLunar()
+  const handleSelectDate = (date: Solar) => {
+    const next = date.toYmd();
+    if (!parseCalendarDate(next)) return;
+    onChange(next);
+    setDraft(next);
+    setError('');
+    setView(date);
+  };
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-2">
-        <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            value={year}
-            onChange={(e) => handleYearChange(e.target.value)}
-            className="text-center"
-          />
-          <span className="text-sm">年</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={month.toString()} onValueChange={handleMonthChange}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: 12 }, (_, i) => (
-                <SelectItem key={i + 1} value={(i + 1).toString()}>
-                  {i + 1}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="text-sm">月</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            value={day}
-            onChange={(e) => handleDayChange(e.target.value)}
-            className="text-center"
-          />
-          <span className="text-sm">日</span>
-        </div>
-      </div>
-
-      <div className="text-center text-sm text-muted-foreground">
-        公历 {today.getYear()}年 {today.getMonth()}月 {today.getDay()}日 星期{today.getWeekInChinese()} {today.getXingZuo()}座
-      </div>
-
-      <div className="flex items-center justify-center gap-4">
-        <Button variant="ghost" size="icon" onClick={prevDay} className="hover:bg-slate-100 dark:hover:bg-slate-800">
-          <ChevronLeft className="h-5 w-5 text-slate-700 dark:text-slate-300" />
+      <div className="flex items-center justify-between">
+        <h2 id="calendar-title" className="font-semibold text-sm">
+          选择日期
+        </h2>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          aria-label="关闭日历"
+        >
+          <X />
         </Button>
-        <span className="text-5xl font-bold text-red-500 w-20 text-center">
-          {today.getDay()}
+      </div>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          const parsed = parseCalendarDate(draft);
+          if (!parsed) {
+            setError('请输入有效日期（1900-01-01 至 2100-12-31）。');
+            return;
+          }
+          handleSelectDate(parsed);
+        }}
+        className="space-y-2"
+      >
+        <label
+          htmlFor="calendar-date"
+          className="text-xs text-muted-foreground"
+        >
+          日期 · 年-月-日
+        </label>
+        <div className="flex gap-2">
+          <input
+            id="calendar-date"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? 'calendar-error' : undefined}
+            placeholder="2026-09-07"
+            className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-sm font-mono"
+          />
+          <Button type="submit" variant="outline">
+            跳转
+          </Button>
+        </div>
+        {error && (
+          <p
+            id="calendar-error"
+            role="alert"
+            className="text-xs text-destructive"
+          >
+            {error}
+          </p>
+        )}
+      </form>
+      <div className="flex items-center justify-between">
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          aria-label="上个月"
+          disabled={view.getYear() === 1900 && view.getMonth() === 1}
+          onClick={() => setView(shiftCalendarMonth(view, -1))}
+        >
+          <ChevronLeft />
+        </Button>
+        <span className="text-sm font-medium" aria-live="polite">
+          {view.getYear()} 年 {view.getMonth()} 月
         </span>
-        <Button variant="ghost" size="icon" onClick={nextDay} className="hover:bg-slate-100 dark:hover:bg-slate-800">
-          <ChevronRight className="h-5 w-5 text-slate-700 dark:text-slate-300" />
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          aria-label="下个月"
+          disabled={view.getYear() === 2100 && view.getMonth() === 12}
+          onClick={() => setView(shiftCalendarMonth(view, 1))}
+        >
+          <ChevronRight />
         </Button>
       </div>
-
-      <div className="text-center text-sm text-muted-foreground">
-        农历 {lunar.getYearInChinese()}年 {lunar.getMonthInChinese()}月 {lunar.getDayInChinese()}
+      <div>
+        <div
+          className="grid grid-cols-7 text-center text-xs text-muted-foreground mb-2"
+          aria-hidden="true"
+        >
+          {['一', '二', '三', '四', '五', '六', '日'].map((day) => (
+            <span key={day}>{day}</span>
+          ))}
+        </div>
+        <div
+          ref={gridRef}
+          className="grid grid-cols-7 gap-1"
+          role="group"
+          aria-label="选择日期，方向键移动，PageUp 和 PageDown 切换月份"
+        >
+          {days.map((date) => {
+            const key = date.toYmd();
+            const holiday = HolidayUtil.getHoliday(key);
+            const isSelected = key === value;
+            const isInMonth = date.getMonth() === view.getMonth();
+            const isTabStop =
+              isSelected ||
+              ((selected.getMonth() !== view.getMonth() ||
+                selected.getYear() !== view.getYear()) &&
+                date.getDay() === 1 &&
+                isInMonth);
+            return (
+              <button
+                type="button"
+                key={key}
+                data-date={key}
+                tabIndex={isTabStop ? 0 : -1}
+                disabled={!parseCalendarDate(key)}
+                aria-pressed={isSelected}
+                aria-current={key === today ? 'date' : undefined}
+                aria-label={`${key}${key === today ? '，今天' : ''}${holiday ? `，${holiday.getName()}${holiday.isWork() ? '调休上班' : '休息'}` : ''}`}
+                onClick={() => handleSelectDate(date)}
+                onKeyDown={(event) => {
+                  const offsets: Record<string, number> = {
+                    ArrowLeft: -1,
+                    ArrowRight: 1,
+                    ArrowUp: -7,
+                    ArrowDown: 7,
+                    Home: -((date.getWeek() + 6) % 7),
+                    End: 6 - ((date.getWeek() + 6) % 7),
+                  };
+                  const next =
+                    event.key === 'PageUp'
+                      ? shiftCalendarMonth(date, -1)
+                      : event.key === 'PageDown'
+                        ? shiftCalendarMonth(date, 1)
+                        : event.key in offsets
+                          ? date.next(offsets[event.key])
+                          : null;
+                  if (next) {
+                    event.preventDefault();
+                    shouldFocusDate.current = true;
+                    handleSelectDate(next);
+                  }
+                }}
+                className={`relative min-h-10 rounded-lg text-sm transition-colors ${isSelected ? 'bg-primary text-primary-foreground' : `${isInMonth ? 'text-foreground' : 'text-muted-foreground/60'} hover:bg-accent ${key === today ? 'ring-1 ring-inset ring-primary' : ''}`}`}
+              >
+                {date.getDay()}
+                {holiday && (
+                  <span
+                    className={`absolute right-0.5 top-0 text-[9px] ${isSelected ? '' : 'text-muted-foreground'}`}
+                  >
+                    {holiday.isWork() ? '班' : '休'}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
-
-      <div className="border-t pt-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Calendar className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-            <span className="text-xs text-slate-600 dark:text-slate-400">假期倒计时</span>
-          </div>
-          {holidayMessages.length > 1 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs gap-1 hover:bg-primary/10 text-primary"
-              onClick={() => {
-                setIsExpanded(!isExpanded)
-                setCurrentIndex(0)
-              }}
-            >
-              {isExpanded ? '收起' : '展开'}
-              <ChevronDown 
-                className={`h-3 w-3 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-              />
-            </Button>
-          )}
-        </div>
-        <div className="text-center space-y-1.5">
-          {holidayMessages.length === 0 ? (
-            <p className="text-sm text-foreground">暂无假期信息</p>
-          ) : isExpanded ? (
-            holidayMessages.map((message, index) => (
-              <p key={index} className="text-sm text-foreground">
-                {message}
-              </p>
-            ))
-          ) : (
-            <>
-              <p className="text-sm text-foreground">
-                {holidayMessages[currentIndex]}
-              </p>
-              {holidayMessages.length > 1 && (
-                <div className="flex items-center justify-center gap-3 mt-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => setCurrentIndex((prev) => (prev > 0 ? prev - 1 : holidayMessages.length - 1))}
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5 text-slate-700 dark:text-slate-300" />
-                  </Button>
-                  <div className="flex gap-1">
-                    {holidayMessages.map((_, index) => (
-                      <div
-                        key={index}
-                        className={`h-1 rounded-full transition-all duration-300 ${
-                          index === currentIndex ? 'w-3 bg-primary' : 'w-1 bg-muted-foreground/40'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => setCurrentIndex((prev) => (prev < holidayMessages.length - 1 ? prev + 1 : 0))}
-                  >
-                    <ChevronRight className="h-3.5 w-3.5 text-slate-700 dark:text-slate-300" />
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+      <div className="flex items-center justify-between border-t pt-3 gap-2">
+        <span className="text-xs text-muted-foreground">
+          休：假期 · 班：调休上班
+        </span>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => handleSelectDate(parseCalendarDate(today)!)}
+        >
+          回到今天
+        </Button>
       </div>
     </div>
-  )
+  );
 }
