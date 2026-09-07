@@ -1,138 +1,291 @@
-import { Link } from 'react-router-dom'
-import { useState } from 'react'
-import { Calendar, Sparkles } from 'lucide-react'
-import { homeTools as tools, toolGroups } from '@/features/tool-registry/registry'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { CalendarCard } from '@/components/shared/CalendarCard'
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, ArrowUpRight, Search, X } from 'lucide-react';
 
-const categories = toolGroups.filter(group => group.tools.some(tool => tool.showOnHome !== false)).map(group => group.name)
-const categoryIcons = Object.fromEntries(toolGroups.map(group => [group.name, group.icon]))
+import { homeTools, toolGroups } from '@/features/tool-registry/registry';
+import { CalendarSearchPanel } from '@/components/shared/CalendarSearchPanel';
 
-const categoryColors: Record<string, string> = {
-  '格式化': 'bg-gradient-to-br from-sky-500 to-blue-600',
-  '编码转换': 'bg-gradient-to-br from-cyan-500 to-sky-600',
-  '文本处理': 'bg-gradient-to-br from-blue-500 to-indigo-600',
-  '转换工具': 'bg-gradient-to-br from-teal-500 to-cyan-600',
-  '生成器': 'bg-gradient-to-br from-emerald-500 to-teal-600',
-  '媒体工具': 'bg-gradient-to-br from-blue-500 to-violet-600',
-  '加密工具': 'bg-gradient-to-br from-indigo-500 to-blue-600',
-  '浏览器扩展': 'bg-gradient-to-br from-cyan-500 to-blue-600',
-  '生活查询': 'bg-gradient-to-br from-emerald-500 to-cyan-600',
-  'AI 工具': 'bg-gradient-to-br from-violet-500 to-purple-600',
-}
-
-const categoryBgColors: Record<string, string> = {
-  '格式化': 'from-sky-50 to-blue-50',
-  '编码转换': 'from-cyan-50 to-sky-50',
-  '文本处理': 'from-blue-50 to-indigo-50',
-  '转换工具': 'from-teal-50 to-cyan-50',
-  '生成器': 'from-emerald-50 to-teal-50',
-  '媒体工具': 'from-blue-50 to-violet-50',
-  '加密工具': 'from-indigo-50 to-blue-50',
-  '浏览器扩展': 'from-cyan-50 to-blue-50',
-  '生活查询': 'from-emerald-50 to-cyan-50',
-  'AI 工具': 'from-violet-50 to-purple-50',
-}
+const categories = toolGroups.filter((group) =>
+  group.tools.some((tool) => tool.showOnHome !== false),
+);
+const categoryDescriptions: Record<string, string> = {
+  格式化: '让代码与数据井井有条',
+  编码转换: '在不同编码之间自由转换',
+  文本处理: '查找、比较，整理每一段文本',
+  转换工具: '时间、颜色与数字，换个表达',
+  生成器: '把重复工作交给一次点击',
+  媒体工具: '处理图片，预览表格数据',
+  加密工具: '计算摘要，查看令牌内容',
+  浏览器扩展: '发现浏览器里的实用帮手',
+  生活查询: '也为工作之外的小事省点心',
+  'AI 工具': '从提示词到模型，辅助 AI 开发',
+};
+const quickTools = [
+  {
+    path: '/json-formatter',
+    name: 'JSON 格式化',
+    description: '从一行数据，到清晰结构',
+    glyph: '{ }',
+    caption: 'JSON',
+    className: 'quick-tool-blue',
+  },
+  {
+    path: '/timestamp',
+    name: '时间戳转换',
+    description: '让时间变成看得懂的日期',
+    glyph: '↔',
+    caption: 'TIME',
+    className: 'quick-tool-teal',
+  },
+  {
+    path: '/diff-checker',
+    name: '文本对比',
+    description: '快速找到两段文本的不同',
+    glyph: '±',
+    caption: 'DIFF',
+    className: 'quick-tool-violet',
+  },
+];
 
 export function Home() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  
+  const [query, setQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('全部工具');
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleGroups = categories
+    .filter(
+      (group) => activeCategory === '全部工具' || group.name === activeCategory,
+    )
+    .map((group) => ({
+      ...group,
+      tools: group.tools.filter(
+        (tool) =>
+          tool.showOnHome !== false &&
+          `${tool.name} ${tool.description ?? ''} ${group.name}`
+            .toLowerCase()
+            .includes(normalizedQuery),
+      ),
+    }))
+    .filter((group) => group.tools.length > 0);
+  const resultCount = visibleGroups.reduce(
+    (count, group) => count + group.tools.length,
+    0,
+  );
+
   return (
-    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 max-w-[1920px] mx-auto relative">
-     
-      {/* 移动端/平板日历 - 显示在顶部 */}
-      <div className="mb-4 sm:mb-6 xl:hidden">
-        <Card className="shadow-lg border border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-950/60 backdrop-blur-xl dark:shadow-2xl dark:shadow-black/40 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/10 before:to-transparent before:opacity-0 dark:before:opacity-100 before:pointer-events-none">
-          <CardHeader className="bg-gradient-to-br from-sky-50 via-cyan-50 to-blue-50 dark:from-slate-800/50 dark:to-slate-900/50 border-b border-slate-200/60 dark:border-slate-700/50 py-3 sm:py-4">
-            <CardTitle className="text-base sm:text-lg flex items-center gap-2 text-sky-700 dark:text-slate-200">
-              <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
-              日历
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4">
-            <CalendarCard />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="flex gap-3 sm:gap-4 xl:gap-6 items-start flex-col xl:flex-row relative">
-        {/* 桌面端日历侧边栏 - 只在大屏幕显示 */}
-        <div className={`
-          fixed xl:static inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out
-          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'}
-          hidden xl:block xl:w-[360px] 2xl:w-[400px] xl:flex-shrink-0
-          ${isSidebarOpen ? 'block' : ''}
-        `}>
-          <div className="h-full overflow-y-auto bg-white dark:bg-slate-950 xl:bg-transparent">
-            <Card className="shadow-lg border border-slate-200/60 dark:border-slate-700/60 hover:shadow-2xl transition-all duration-300 bg-white dark:bg-slate-950/60 backdrop-blur-xl dark:shadow-2xl dark:shadow-black/40 xl:sticky top-4 sm:top-6 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/10 before:to-transparent before:opacity-0 dark:before:opacity-100 before:pointer-events-none">
-              <CardHeader className="bg-gradient-to-br from-sky-50 via-cyan-50 to-blue-50 dark:from-slate-800/50 dark:to-slate-900/50 border-b border-slate-200/60 dark:border-slate-700/50 py-4 sm:py-6">
-                <CardTitle className="text-lg sm:text-xl flex items-center gap-2 text-sky-700 dark:text-slate-200">
-                  <Calendar className="h-5 w-5" />
-                  日历
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                <CalendarCard />
-              </CardContent>
-            </Card>
-          </div>
+    <div className="workbench space-y-9">
+      <section className="workbench-intro" aria-labelledby="workbench-title">
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <span className="workbench-eyebrow">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            开发者的日常工作台
+          </span>
+          <span className="font-mono text-xs text-muted-foreground hidden sm:block">
+            TOOLS / READY TO USE
+          </span>
         </div>
+        <h1 id="workbench-title" className="workbench-title">
+          把琐碎，<span className="text-primary">交给工具。</span>
+        </h1>
+        <p className="mt-4 text-sm sm:text-base text-muted-foreground leading-relaxed">
+          格式化一段数据，转换一个时间，或整理新的灵感。
+          <br className="sm:hidden" /> 你需要的工具，就在手边。
+        </p>
+        <CalendarSearchPanel>
+          <div className="home-search">
+            <Search
+              className="h-5 w-5 shrink-0 text-primary"
+              aria-hidden="true"
+            />
+            <input
+              aria-label="查找工具"
+              placeholder="想处理什么？搜索 JSON、时间戳、Base64…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.stopPropagation();
+                  setQuery('');
+                }
+              }}
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+            {query ? (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                aria-label="清空工具搜索"
+                className="p-1 rounded-md hover:bg-accent"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : (
+              <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">
+                {homeTools.length} 个工具
+              </span>
+            )}
+          </div>
+        </CalendarSearchPanel>
+      </section>
 
-        {/* 遮罩层 */}
-        {isSidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/50 z-30 xl:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
+      {!normalizedQuery && activeCategory === '全部工具' && (
+        <section aria-labelledby="quick-tools-title">
+          <div className="flex items-center justify-between mb-4">
+            <h2 id="quick-tools-title" className="text-sm font-semibold">
+              快捷工作区
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              少一点重复，多一点专注
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            {quickTools.map((tool) => (
+              <Link
+                key={tool.path}
+                to={tool.path}
+                className={`quick-tool ${tool.className}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span className="quick-tool-glyph" aria-hidden="true">
+                    {tool.glyph}
+                  </span>
+                  <span className="font-mono text-[10px] tracking-widest opacity-70 hidden sm:inline">
+                    {tool.caption}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2 mt-5">
+                  <div>
+                    <h3 className="text-[11px] sm:text-sm font-semibold">
+                      {tool.name}
+                    </h3>
+                    <p className="text-xs mt-1.5 opacity-75 hidden sm:block">
+                      {tool.description}
+                    </p>
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 shrink-0 hidden sm:block" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
-        {/* 工具分类网格 */}
-        <div className="flex-1 min-w-0">
-          <div className="grid gap-3 sm:gap-4 xl:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3">
-            {categories.map((category) => {
-              const CategoryIcon = categoryIcons[category] || Sparkles
+      <section aria-labelledby="all-tools-title" className="space-y-5">
+        <div className="flex items-center justify-between">
+          <h2
+            id="all-tools-title"
+            className="text-lg font-semibold tracking-tight"
+          >
+            工具目录
+            <span className="ml-3 font-mono text-xs font-normal text-muted-foreground">
+              {homeTools.length}
+            </span>
+          </h2>
+          <span className="text-xs text-muted-foreground" role="status">
+            {normalizedQuery
+              ? `找到 ${resultCount} 个工具`
+              : '按需取用，即开即用'}
+          </span>
+        </div>
+        <div
+          className="flex flex-wrap gap-1.5"
+          role="group"
+          aria-label="筛选工具分类"
+        >
+          {['全部工具', ...categories.map((group) => group.name)].map(
+            (category) => (
+              <button
+                type="button"
+                key={category}
+                aria-pressed={activeCategory === category}
+                onClick={() => setActiveCategory(category)}
+                className={`category-filter ${activeCategory === category ? 'category-filter-active' : ''}`}
+              >
+                {category}
+              </button>
+            ),
+          )}
+        </div>
+        {visibleGroups.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+            {visibleGroups.map((group) => {
+              const Icon = group.icon;
               return (
-                <Card
-                  key={category}
-                  className="group hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 border border-slate-200/60 dark:border-slate-700/60 hover:border-slate-300/80 dark:hover:border-slate-600/60 overflow-hidden bg-white dark:bg-slate-950/60 backdrop-blur-xl dark:shadow-2xl dark:shadow-black/40 relative before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/10 before:to-transparent before:opacity-0 dark:before:opacity-100 before:pointer-events-none"
-                >
-                  <CardHeader className={`bg-gradient-to-br ${categoryBgColors[category]} dark:from-slate-800/50 dark:to-slate-900/50 border-b border-slate-200/60 dark:border-slate-700/50`}>
-                    <CardTitle className="text-lg flex items-center gap-2 text-slate-700 dark:text-slate-200">
-                      <div className={`p-2 rounded-lg ${categoryColors[category]} text-white shadow-sm`}>
-                        <CategoryIcon className="h-4 w-4" />
-                      </div>
-                      {category}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 space-y-2">
-                    {tools
-                      .filter((tool) => tool.category === category)
-                      .map((tool) => {
-                        const Icon = tool.icon
-                        return (
-                          <Link key={tool.path} to={tool.path}>
-                            <Button
-                              variant="ghost"
-                              className="w-full justify-start h-11 px-4 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:scale-[1.02] transition-all duration-200 group/btn"
-                            >
-                              <div 
-                                className={`p-1.5 rounded mr-3 text-white group-hover/btn:scale-110 transition-transform shadow-sm bg-gradient-to-br ${tool.gradient}`}
-                              >
-                                <Icon className="h-3.5 w-3.5" />
-                              </div>
-                              <span className="font-medium text-slate-700 dark:text-slate-200">{tool.name}</span>
-                            </Button>
-                          </Link>
-                        )
-                      })}
-                  </CardContent>
-                </Card>
-              )
+                <section key={group.name} className="catalog-card">
+                  <div className="flex items-center gap-3 px-5 pt-5 pb-4">
+                    <span className="catalog-icon">
+                      <Icon className="h-[18px] w-[18px]" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold">{group.name}</h3>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        {categoryDescriptions[group.name] ??
+                          '值得收藏的实用工具'}
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-mono text-muted-foreground">
+                      {group.tools.length}
+                    </span>
+                  </div>
+                  <div className="mx-5 border-t" />
+                  <div className="p-2.5">
+                    {group.tools.map((tool) => {
+                      const ToolIcon = tool.icon;
+                      const content = (
+                        <>
+                          <ToolIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <span className="flex-1">{tool.name}</span>
+                          {tool.isExternal ? (
+                            <ArrowUpRight className="catalog-arrow" />
+                          ) : (
+                            <ArrowRight className="catalog-arrow" />
+                          )}
+                        </>
+                      );
+                      return tool.isExternal ? (
+                        <a
+                          key={tool.path}
+                          href={tool.path}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="catalog-link"
+                        >
+                          {content}
+                        </a>
+                      ) : (
+                        <Link
+                          key={tool.path}
+                          to={tool.path}
+                          className="catalog-link"
+                        >
+                          {content}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
             })}
           </div>
-        </div>
-      </div>
+        ) : (
+          <div className="rounded-xl border border-dashed p-12 text-center">
+            <Search className="h-7 w-7 text-muted-foreground mx-auto mb-3" />
+            <p className="font-medium">没有找到匹配的工具</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              试试“格式化”或“文本”，也可以清除筛选重新浏览。
+            </p>
+            <button
+              type="button"
+              className="text-sm text-primary mt-5 underline underline-offset-4"
+              onClick={() => {
+                setQuery('');
+                setActiveCategory('全部工具');
+              }}
+            >
+              查看全部工具
+            </button>
+          </div>
+        )}
+      </section>
     </div>
-  )
+  );
 }
