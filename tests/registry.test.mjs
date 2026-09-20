@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { tools, homeTools, toolGroups, toolByPath } from '../src/features/tool-registry/registry.ts'
 
 test('every tool has a unique navigable path, display metadata and lazy loader', () => {
-  assert.equal(tools.length, 41)
-  assert.equal(homeTools.length, 40)
+  assert.equal(tools.length, 42)
+  assert.equal(homeTools.length, 41)
   assert.equal(new Set(tools.map((tool) => tool.path)).size, tools.length)
   for (const tool of tools) {
     assert.match(tool.path, /^\/[a-z0-9-]+$/)

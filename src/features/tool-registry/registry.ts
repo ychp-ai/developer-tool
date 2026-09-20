@@ -30,6 +30,7 @@ import {
   Type,
   Github,
   WalletCards,
+  HardDrive,
 } from 'lucide-react'
 import type { ToolGroup } from './types'
 
@@ -168,6 +169,15 @@ export const toolGroups: ToolGroup[] = [
           import('../../tools/convertor/NumberConverter').then((m) => ({ default: m.NumberConverter })),
         name: '进制转换',
         icon: Calculator,
+      },
+      {
+        path: '/storage-converter',
+        gradient: 'from-cyan-500 to-blue-600',
+        load: () =>
+          import('../../tools/convertor/StorageConverter').then((m) => ({ default: m.StorageConverter })),
+        name: '存储单位转换器',
+        icon: HardDrive,
+        description: '字节 B、KB、MB、GB、TB、PB 换算，支持 1024 和 1000 进制',
       },
       {
         path: '/calculator',
