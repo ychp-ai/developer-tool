@@ -334,75 +334,75 @@ export const toolGroups: ToolGroup[] = [
         name: 'AI 价格计算器',
         icon: DollarSign,
       },
-      {
-        path: '/function-calling-generator',
-        gradient: 'from-sky-500 to-blue-600',
-        load: () =>
-          import('../../tools/ai/FunctionCallingGenerator').then((m) => ({
-            default: m.FunctionCallingGenerator,
-          })),
-        name: 'Function Calling 生成器',
-        icon: Code2,
-      },
-      {
-        path: '/json-to-prompt',
-        gradient: 'from-cyan-500 to-sky-600',
-        load: () => import('../../tools/ai/JsonToPrompt').then((m) => ({ default: m.JsonToPrompt })),
-        name: 'JSON → Prompt',
-        icon: ArrowRightLeft,
-      },
-      {
-        path: '/image-prompt-generator',
-        gradient: 'from-violet-500 to-pink-600',
-        load: () =>
-          import('../../tools/ai/ImagePromptGenerator').then((m) => ({ default: m.ImagePromptGenerator })),
-        name: '图像 Prompt 生成器',
-        icon: ImageIcon,
-      },
-      {
-        path: '/system-prompt-generator',
-        gradient: 'from-purple-500 to-indigo-600',
-        load: () =>
-          import('../../tools/ai/SystemPromptGenerator').then((m) => ({ default: m.SystemPromptGenerator })),
-        name: 'System Prompt 生成器',
-        icon: Sparkles,
-      },
-      {
-        path: '/markdown-to-prompt',
-        gradient: 'from-blue-500 to-violet-600',
-        load: () => import('../../tools/ai/MarkdownToPrompt').then((m) => ({ default: m.MarkdownToPrompt })),
-        name: 'Markdown → Prompt',
-        icon: FileText,
-      },
-      {
-        path: '/fewshot-formatter',
-        gradient: 'from-teal-500 to-cyan-600',
-        load: () => import('../../tools/ai/FewshotFormatter').then((m) => ({ default: m.FewshotFormatter })),
-        name: 'Few-shot 格式化',
-        icon: Layers,
-      },
-      {
-        path: '/image-size-calculator',
-        gradient: 'from-indigo-500 to-purple-600',
-        load: () =>
-          import('../../tools/ai/ImageSizeCalculator').then((m) => ({ default: m.ImageSizeCalculator })),
-        name: '图像尺寸计算器',
-        icon: Calculator,
-      },
-      {
-        path: '/rag-text-chunker',
-        name: 'RAG 文本分块器',
-        icon: Layers,
-        gradient: 'from-teal-500 to-cyan-600',
-        load: () => import('../../tools/ai/RagTextChunker').then((m) => ({ default: m.RagTextChunker })),
-      },
-      {
-        path: '/vector-similarity',
-        name: '向量相似度计算',
-        icon: BrainCircuit,
-        gradient: 'from-indigo-500 to-purple-600',
-        load: () => import('../../tools/ai/VectorSimilarity').then((m) => ({ default: m.VectorSimilarity })),
-      },
+      // {
+      //   path: '/function-calling-generator',
+      //   gradient: 'from-sky-500 to-blue-600',
+      //   load: () =>
+      //     import('../../tools/ai/FunctionCallingGenerator').then((m) => ({
+      //       default: m.FunctionCallingGenerator,
+      //     })),
+      //   name: 'Function Calling 生成器',
+      //   icon: Code2,
+      // },
+      // {
+      //   path: '/json-to-prompt',
+      //   gradient: 'from-cyan-500 to-sky-600',
+      //   load: () => import('../../tools/ai/JsonToPrompt').then((m) => ({ default: m.JsonToPrompt })),
+      //   name: 'JSON → Prompt',
+      //   icon: ArrowRightLeft,
+      // },
+      // {
+      //   path: '/image-prompt-generator',
+      //   gradient: 'from-violet-500 to-pink-600',
+      //   load: () =>
+      //     import('../../tools/ai/ImagePromptGenerator').then((m) => ({ default: m.ImagePromptGenerator })),
+      //   name: '图像 Prompt 生成器',
+      //   icon: ImageIcon,
+      // },
+      // {
+      //   path: '/system-prompt-generator',
+      //   gradient: 'from-purple-500 to-indigo-600',
+      //   load: () =>
+      //     import('../../tools/ai/SystemPromptGenerator').then((m) => ({ default: m.SystemPromptGenerator })),
+      //   name: 'System Prompt 生成器',
+      //   icon: Sparkles,
+      // },
+      // {
+      //   path: '/markdown-to-prompt',
+      //   gradient: 'from-blue-500 to-violet-600',
+      //   load: () => import('../../tools/ai/MarkdownToPrompt').then((m) => ({ default: m.MarkdownToPrompt })),
+      //   name: 'Markdown → Prompt',
+      //   icon: FileText,
+      // },
+      // {
+      //   path: '/fewshot-formatter',
+      //   gradient: 'from-teal-500 to-cyan-600',
+      //   load: () => import('../../tools/ai/FewshotFormatter').then((m) => ({ default: m.FewshotFormatter })),
+      //   name: 'Few-shot 格式化',
+      //   icon: Layers,
+      // },
+      // {
+      //   path: '/image-size-calculator',
+      //   gradient: 'from-indigo-500 to-purple-600',
+      //   load: () =>
+      //     import('../../tools/ai/ImageSizeCalculator').then((m) => ({ default: m.ImageSizeCalculator })),
+      //   name: '图像尺寸计算器',
+      //   icon: Calculator,
+      // },
+      // {
+      //   path: '/rag-text-chunker',
+      //   name: 'RAG 文本分块器',
+      //   icon: Layers,
+      //   gradient: 'from-teal-500 to-cyan-600',
+      //   load: () => import('../../tools/ai/RagTextChunker').then((m) => ({ default: m.RagTextChunker })),
+      // },
+      // {
+      //   path: '/vector-similarity',
+      //   name: '向量相似度计算',
+      //   icon: BrainCircuit,
+      //   gradient: 'from-indigo-500 to-purple-600',
+      //   load: () => import('../../tools/ai/VectorSimilarity').then((m) => ({ default: m.VectorSimilarity })),
+      // },
     ],
   },
   {

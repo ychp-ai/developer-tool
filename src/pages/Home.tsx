@@ -19,7 +19,8 @@ const categoryDescriptions: Record<string, string> = {
   加密工具: '计算摘要，查看令牌内容',
   浏览器扩展: '发现浏览器里的实用帮手',
   生活查询: '也为工作之外的小事省点心',
-  'AI 工具': '从提示词到模型，辅助 AI 开发',
+  // 'AI 工具': '从提示词到模型，辅助 AI 开发',
+  'AI 工具': '协助预估 token 损耗和模型费用',
 };
 const defaultQuickTools = [
   {
